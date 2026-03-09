@@ -30,6 +30,7 @@ export class AppComponent {
   previewLines: string[] = [];
 
   currentStep: 'upload' | 'config' | 'result' = 'upload';
+  isDarkTheme = false;
 
   constructor(
     private fb: FormBuilder,
@@ -38,6 +39,27 @@ export class AppComponent {
     private formatter: SintegraFormatterService
   ) {
     this.initForm();
+    this.loadTheme();
+  }
+
+  toggleTheme(): void {
+    this.isDarkTheme = !this.isDarkTheme;
+    this.applyTheme();
+    localStorage.setItem('sintegra-theme', this.isDarkTheme ? 'dark' : 'light');
+  }
+
+  private loadTheme(): void {
+    const saved = localStorage.getItem('sintegra-theme');
+    this.isDarkTheme = saved === 'dark';
+    this.applyTheme();
+  }
+
+  private applyTheme(): void {
+    if (this.isDarkTheme) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
   }
 
   private initForm(): void {
