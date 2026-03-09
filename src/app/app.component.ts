@@ -12,6 +12,23 @@ interface FileInfo {
   size: string;
 }
 
+interface ConversionRecord {
+  id: string;
+  timestamp: number;
+  fileNames: string[];
+  documentType: string;
+  documentCount: number;
+  totalRecords: number;
+  razaoSocial: string;
+  cnpj: string;
+  periodo: string;
+  outputFileName: string;
+  content: string;
+}
+
+const HISTORY_KEY = 'sintegra-history';
+const MAX_HISTORY = 20;
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -31,6 +48,7 @@ export class AppComponent {
 
   currentStep: 'upload' | 'config' | 'result' = 'upload';
   isDarkTheme = false;
+  history: ConversionRecord[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -40,6 +58,7 @@ export class AppComponent {
   ) {
     this.initForm();
     this.loadTheme();
+    this.loadHistory();
   }
 
   toggleTheme(): void {
@@ -150,16 +169,92 @@ export class AppComponent {
   downloadFile(): void {
     if (!this.generationResult?.content) return;
 
-    const blob = new Blob([this.generationResult.content], {
-      type: 'text/plain;charset=utf-8',
-    });
-
     const baseName =
       this.selectedFiles.length === 1
         ? this.selectedFiles[0].name.replace('.xml', '')
         : 'sintegra';
 
-    saveAs(blob, `${baseName}_sintegra.txt`);
+    const outputFileName = `${baseName}_sintegra.txt`;
+
+    const blob = new Blob([this.generationResult.content], {
+      type: 'text/plain;charset=utf-8',
+    });
+    saveAs(blob, outputFileName);
+
+    this.saveToHistory(outputFileName);
+  }
+
+  downloadFromHistory(record: ConversionRecord): void {
+    const blob = new Blob([record.content], {
+      type: 'text/plain;charset=utf-8',
+    });
+    saveAs(blob, record.outputFileName);
+  }
+
+  removeFromHistory(id: string): void {
+    this.history = this.history.filter((r) => r.id !== id);
+    this.persistHistory();
+  }
+
+  clearHistory(): void {
+    this.history = [];
+    this.persistHistory();
+  }
+
+  private saveToHistory(outputFileName: string): void {
+    if (!this.generationResult?.content) return;
+
+    const v = this.configForm.value;
+    const record: ConversionRecord = {
+      id: Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+      timestamp: Date.now(),
+      fileNames: this.selectedFiles.map((f) => f.name),
+      documentType: this.documentType,
+      documentCount: this.parsedDocuments.length,
+      totalRecords: this.generationResult.totalRecords,
+      razaoSocial: v.razaoSocial || '',
+      cnpj: v.cnpj || '',
+      periodo: v.dtInicial && v.dtFinal ? `${v.dtInicial} - ${v.dtFinal}` : '',
+      outputFileName,
+      content: this.generationResult.content,
+    };
+
+    this.history = [record, ...this.history].slice(0, MAX_HISTORY);
+    this.persistHistory();
+  }
+
+  private loadHistory(): void {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      this.history = raw ? JSON.parse(raw) : [];
+    } catch {
+      this.history = [];
+    }
+  }
+
+  private persistHistory(): void {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(this.history));
+    } catch {
+      // localStorage full — remove oldest entries and retry
+      this.history = this.history.slice(0, Math.max(1, this.history.length - 5));
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(this.history));
+      } catch {
+        // give up silently
+      }
+    }
+  }
+
+  formatHistoryDate(timestamp: number): string {
+    const d = new Date(timestamp);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  formatCnpj(cnpj: string): string {
+    if (cnpj.length !== 14) return cnpj;
+    return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12)}`;
   }
 
   goToStep(step: 'upload' | 'config' | 'result'): void {

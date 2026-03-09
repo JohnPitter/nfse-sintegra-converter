@@ -227,6 +227,56 @@
       </svg>
       <span>{{ err }}</span>
     </div>
+
+    <!-- Conversion History -->
+    <section class="history-section" *ngIf="history.length > 0">
+      <div class="history-header">
+        <div class="history-title">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Historico de conversoes</span>
+          <span class="history-count">{{ history.length }}</span>
+        </div>
+        <button class="btn-text" (click)="clearHistory()">Limpar</button>
+      </div>
+
+      <div class="history-list">
+        <div class="history-card" *ngFor="let record of history">
+          <div class="history-card-top">
+            <div class="history-info">
+              <span class="history-empresa">{{ record.razaoSocial }}</span>
+              <span class="history-meta">
+                {{ record.documentCount }} doc{{ record.documentCount > 1 ? 's' : '' }}
+                &middot; {{ record.documentType }}
+                &middot; {{ record.totalRecords }} registros
+              </span>
+            </div>
+            <span class="history-date">{{ formatHistoryDate(record.timestamp) }}</span>
+          </div>
+          <div class="history-card-bottom">
+            <div class="history-files">
+              <span class="history-file-tag" *ngFor="let f of record.fileNames.slice(0, 3)">{{ f }}</span>
+              <span class="history-file-tag history-file-more" *ngIf="record.fileNames.length > 3">+{{ record.fileNames.length - 3 }}</span>
+            </div>
+            <div class="history-actions">
+              <button class="btn-icon" (click)="downloadFromHistory(record)" title="Download">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                  <path d="M7.5 2v7.5M4.5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M2.5 11.5v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <button class="btn-icon btn-icon-danger" (click)="removeFromHistory(record.id)" title="Remover">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- ==================== STEP 2: CONFIG ==================== -->
