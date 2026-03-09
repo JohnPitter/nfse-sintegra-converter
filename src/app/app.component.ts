@@ -49,6 +49,8 @@ export class AppComponent {
   currentStep: 'upload' | 'config' | 'result' = 'upload';
   isDarkTheme = false;
   history: ConversionRecord[] = [];
+  historyPage = 0;
+  historyPageSize = 5;
 
   constructor(
     private fb: FormBuilder,
@@ -193,11 +195,15 @@ export class AppComponent {
 
   removeFromHistory(id: string): void {
     this.history = this.history.filter((r) => r.id !== id);
+    if (this.historyPage >= this.historyTotalPages && this.historyPage > 0) {
+      this.historyPage--;
+    }
     this.persistHistory();
   }
 
   clearHistory(): void {
     this.history = [];
+    this.historyPage = 0;
     this.persistHistory();
   }
 
@@ -255,6 +261,23 @@ export class AppComponent {
   formatCnpj(cnpj: string): string {
     if (cnpj.length !== 14) return cnpj;
     return `${cnpj.slice(0, 2)}.${cnpj.slice(2, 5)}.${cnpj.slice(5, 8)}/${cnpj.slice(8, 12)}-${cnpj.slice(12)}`;
+  }
+
+  get paginatedHistory(): ConversionRecord[] {
+    const start = this.historyPage * this.historyPageSize;
+    return this.history.slice(start, start + this.historyPageSize);
+  }
+
+  get historyTotalPages(): number {
+    return Math.ceil(this.history.length / this.historyPageSize);
+  }
+
+  historyPrev(): void {
+    if (this.historyPage > 0) this.historyPage--;
+  }
+
+  historyNext(): void {
+    if (this.historyPage < this.historyTotalPages - 1) this.historyPage++;
   }
 
   goToStep(step: 'upload' | 'config' | 'result'): void {
