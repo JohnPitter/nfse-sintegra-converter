@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(node:*)",
+      "Bash(rm:*)",
+      "Bash(npm start)",
+      "Bash(rg:*)",
+      "Bash(npm install)",
+      "Bash(npm test:*)",
+      "Bash(grep:*)",
+      "Bash(timeout 10 npm start)",
+      "Bash(npx ts-node:*)",
+      "WebFetch(domain:www.fazenda.mg.gov.br)"
+    ],
+    "deny": []
+  }
+}

@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+<NFe xmlns="http://www.portalfiscal.inf.br/nfe">
+<infNFe Id="NFe31250503624675000108650010000013821012603640" versao="4.00">
+<ide>
+<cUF>31</cUF>
+<cNF>01260364</cNF>
+<natOp>Venda</natOp>
+<mod>65</mod>
+<serie>1</serie>
+<nNF>1382</nNF>
+<dhEmi>2025-05-02T10:03:16-03:00</dhEmi>
+<tpNF>1</tpNF>
+<idDest>1</idDest>
+<cMunFG>3162500</cMunFG>
+<tpImp>4</tpImp>
+<tpEmis>1</tpEmis>
+<cDV>0</cDV>
+<tpAmb>1</tpAmb>
+<finNFe>1</finNFe>
+<indFinal>1</indFinal>
+<indPres>1</indPres>
+<indIntermed>0</indIntermed>
+<procEmi>0</procEmi>
+<verProc>Oobj-DFe</verProc>
+</ide>
+<emit>
+<CNPJ>03624675000108</CNPJ>
+<xNome>CRISTIANE MACIENTE SCALIONI BRITO</xNome>
+<xFant>MATRIZ</xFant>
+<enderEmit>
+<xLgr>RUA CONSELHEIRO BELIZARIO LEITE ANDRADE NETO</xLgr>
+<nro>91</nro>
+<xBairro>SAO JUDAS TADEU</xBairro>
+<cMun>3162500</cMun>
+<xMun>SAO JOAO DEL REI</xMun>
+<UF>MG</UF>
+<CEP>36307044</CEP>
+<cPais>1058</cPais>
+<xPais>Brasil</xPais>
+<fone>3233718232</fone>
+</enderEmit>
+<IE>6250645290068</IE>
+<IM>ISENTO</IM>
+<CRT>1</CRT>
+</emit>
+<det nItem="1">
+<prod>
+<cProd>26030</cProd>
+<cEAN>0000000260305</cEAN>
+<xProd>HENNA TINTURA CAPILAR TEMPORARIA EM PO</xProd>
+<NCM>30039099</NCM>
+<CFOP>5102</CFOP>
+<uCom>UN</uCom>
+<qCom>1.0000</qCom>
+<vUnCom>42.3500</vUnCom>
+<vProd>42.35</vProd>
+<cEANTrib>0000000260305</cEANTrib>
+<uTrib>unid</uTrib>
+<qTrib>1.0000</qTrib>
+<vUnTrib>42.3500</vUnTrib>
+<vDesc>2.35</vDesc>
+<indTot>1</indTot>
+</prod>
+<imposto>
+<ICMS>
+<ICMSSN102>
+<orig>0</orig>
+<CSOSN>102</CSOSN>
+</ICMSSN102>
+</ICMS>
+<PIS>
+<PISOutr>
+<CST>49</CST>
+<vBC>0.00</vBC>
+<pPIS>0.0000</pPIS>
+<vPIS>0.00</vPIS>
+</PISOutr>
+</PIS>
+<COFINS>
+<COFINSOutr>
+<CST>49</CST>
+<vBC>0.00</vBC>
+<pCOFINS>0.0000</pCOFINS>
+<vCOFINS>0.00</vCOFINS>
+</COFINSOutr>
+</COFINS>
+</imposto>
+</det>
+<total>
+<ICMSTot>
+<vBC>0.00</vBC>
+<vICMS>0.00</vICMS>
+<vICMSDeson>0.00</vICMSDeson>
+<vFCPUFDest>0.00</vFCPUFDest>
+<vICMSUFDest>0.00</vICMSUFDest>
+<vICMSUFRemet>0.00</vICMSUFRemet>
+<vFCP>0.00</vFCP>
+<vBCST>0.00</vBCST>
+<vST>0.00</vST>
+<vFCPST>0.00</vFCPST>
+<vFCPSTRet>0.00</vFCPSTRet>
+<vProd>42.35</vProd>
+<vFrete>0.00</vFrete>
+<vSeg>0.00</vSeg>
+<vDesc>2.35</vDesc>
+<vII>0.00</vII>
+<vIPI>0.00</vIPI>
+<vIPIDevol>0.00</vIPIDevol>
+<vPIS>0.00</vPIS>
+<vCOFINS>0.00</vCOFINS>
+<vOutro>0.00</vOutro>
+<vNF>40.00</vNF>
+<vTotTrib>0.00</vTotTrib>
+</ICMSTot>
+</total>
+<transp>
+<modFrete>9</modFrete>
+</transp>
+<pag>
+<detPag>
+<tPag>01</tPag>
+<vPag>40.00</vPag>
+</detPag>
+</pag>
+<infAdic>
+<infCpl>R$5,70 Fed. R$5,08 Est. R$0,00 Mun.\nFonte: IBPT/FECOMERCIO \n\n</infCpl>
+</infAdic>
+</infNFe>
+<infNFeSupl>
+<qrCode>https://portalsped.fazenda.mg.gov.br/portalnfce/sistema/qrcode.xhtml?p=31250503624675000108650010000013821012603640|2|1|1|B238AF73DB416A66B12310184277AE325A3A4C72</qrCode>
+<urlChave>https://portalsped.fazenda.mg.gov.br/portalnfce</urlChave>
+</infNFeSupl>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+<SignedInfo>
+<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+<SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+<Reference URI="#NFe31250503624675000108650010000013821012603640">
+<Transforms>
+<Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+<Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+</Transforms>
+<DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<DigestValue>xCnJ7rsd+0BwSiJvPpDogLUAx0U=</DigestValue>
+</Reference>
+</SignedInfo>
+<SignatureValue>dbn/+o32ojxw+wO0LHSF8wsUotfSHcRBssWym/QGPsZwrsyL338ODlE4UtwPDP5N1KEDf5QhR8va SWpZFkZuEgIF4D38rtoXRRf/pPBfYJy0Zf4dHS8Ax5VhnGjg8ub68I7VfcqWVqAdy/LjHvzIX6nl yPsjZbM6w9wt29C80JtJayt5rW/U4jVmjX8QCIfUhcaDjAOk395OfBmHvMdhXuI8S38ysnjaZMve aa1JZ4/4PIvaskYOzX8V9r60Lp4QPeLZqw9IGTIPAVva7V2iK6xbT7psgQNeD8qujvEIDnaMO3KY I+wpdxYG6uYc2hQsBxGRoCAR5iDGC9aL2KVMPA==</SignatureValue>
+<KeyInfo>
+<X509Data>
+<X509Certificate>MIIH5DCCBcygAwIBAgILANWNkmZsXjHkfvkwDQYJKoZIhvcNAQELBQAwWzELMAkGA1UEBhMCQlIx FjAUBgNVBAsMDUFDIFN5bmd1bGFySUQxEzARBgNVBAoMCklDUC1CcmFzaWwxHzAdBgNVBAMMFkFD IFN5bmd1bGFySUQgTXVsdGlwbGEwHhcNMjQwODIxMTIyNjQ1WhcNMjUwODIxMTIyNjQ1WjCB0DEL MAkGA1UEBhMCQlIxEzARBgNVBAoMCklDUC1CcmFzaWwxIjAgBgNVBAsMGUNlcnRpZmljYWRvIERp Z2l0YWwgUEogQTExEzARBgNVBAsMClByZXNlbmNpYWwxFzAVBgNVBAsMDjAyMzQ4Nzk3MDAwMTQ4 MR8wHQYDVQQLDBZBQyBTeW5ndWxhcklEIE11bHRpcGxhMTkwNwYDVQQDDDBDUklTVElBTkUgTUFD SUVOVEUgU0NBTElPTkkgQlJJVE86MDM2MjQ2NzUwMDAxMDgwggEiMA0GCSqGSIb3DQEBAQUAA4IB DwAwggEKAoIBAQDXHkoPFT/pLt7KxVsAhBId5LDJQZT26ML3HBTm2Qz/EBmE+HY4OSEJ2dwgYbcR PKfZ916KpCrFxt1swiGiyp8K5+WuuvFJeHAPN7KMoFotZeOm9ndbvqZmR9WmUp2Dz9hRAyHAXcsU 9hMjcXbFMdjoADowNaWTJrweMSjT4cITQYvKq8J+TA+yq2V4Shlh3ej5Zxx8+9oxH55j7bIeF8Va YvlbsiHXKuRpp4q3uaWAWxsnpTgGacM/PSc8rS1GYv5VkTVm7ACaBEtZeJegR0zU75J4SRAmTPbO eTzC1n/R+wHEBLFjEYstFL6zMVQbj1tbA5agycDWUZ4r5jIx6SRNAgMBAAGjggMxMIIDLTAOBgNV HQ8BAf8EBAMCBeAwHQYDVR0lBBYwFAYIKwYBBQUHAwQGCCsGAQUFBwMCMAkGA1UdEwQCMAAwHwYD VR0jBBgwFoAUk+H/fh3l9eRN4TliiyFpleavchYwHQYDVR0OBBYEFGyA4ihmTqZX5j0rqw3SPKMV n0bTMH8GCCsGAQUFBwEBBHMwcTBvBggrBgEFBQcwAoZjaHR0cDovL3N5bmd1bGFyaWQuY29tLmJy L3JlcG9zaXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvY2VydGlmaWNhZG9zL2FjLXN5bmd1 bGFyaWQtbXVsdGlwbGEucDdiMIGCBgNVHSAEezB5MHcGB2BMAQIBgQUwbDBqBggrBgEFBQcCARZe aHR0cDovL3N5bmd1bGFyaWQuY29tLmJyL3JlcG9zaXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlw bGEvZHBjL2RwYy1hYy1zeW5ndWxhcklELW11bHRpcGxhLnBkZjCBxQYDVR0RBIG9MIG6oCwGBWBM AQMCoCMEIUNSSVNUSUFORSBNQUNJRU5URSBTQ0FMSU9OSSBCUklUT6AZBgVgTAEDA6AQBA4wMzYy NDY3NTAwMDEwOKBCBgVgTAEDBKA5BDcxNTEyMTk2OTY5MzkzMDUyNjIwMDAwMDAwMDAwMDAwMDAw MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwoBcGBWBMAQMHoA4EDDAwMDAwMDAwMDAwMIESY3JpbXNi QGhvdG1haWwuY29tMIHiBgNVHR8Egdowgdcwb6BtoGuGaWh0dHA6Ly9pY3AtYnJhc2lsLnN5bmd1 bGFyaWQuY29tLmJyL3JlcG9zaXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvbGNyL2xjci1h Yy1zeW5ndWxhcmlkLW11bHRpcGxhLmNybDBkoGKgYIZeaHR0cDovL3N5bmd1bGFyaWQuY29tLmJy L3JlcG9zaXRvcmlvL2FjLXN5bmd1bGFyaWQtbXVsdGlwbGEvbGNyL2xjci1hYy1zeW5ndWxhcmlk LW11bHRpcGxhLmNybDANBgkqhkiG9w0BAQsFAAOCAgEACUBNVk130A2kuA/2cRnTJItcvu7WCY7p JVM6OqsfPszAXXmv790dx0CbHt9vzGUkuMMV6zqql8VkItAGtjcfwtsSHmKe8jgYRqbagdinFnXa IdeYSR7/m01/GAh/R8sRnR70sYqZf8rPmiM2mobzxR2ImD9Op5GkLNVxVdmyvYqesxt/TxEIgXX9 rXJCZz7wTxEKispM1K0MTzm++c9GBihxK8zWBJo081aUNuJDXAZZ+HsTV2Sh+gE612J3ant8fGCC 7kY6HcaB5Yjt86rG70F+XQN0sayqBIwzpATIlwb7zUvfZJFfUt0U3VqDVK+5eQFGziRf/oy7nNvV J/FxsxeD1qNEmGs55Cv8N5dMDHbKcDXIvKOq9AFdtgMosIzw51473V+h3tgxcduXbU4H/AA1AQb4 t9mBN/rQPIGdHw37kYUi/D6mN3awH/gEcHcSN+g5Cysm1obO4PMgaTtdfI5E1HHKf2jN/SkkY0mC fk21q51OSu2K46VQNWz07Os0SUVVZo5RmomdxU4d4GvzbJW4fV8n5zQUbpPDRuRuZl7VzyGmz7By OS6FIjoF+haP11uR4rulP1J3Rr63C1xNRxcy4cSPjNBACT2aq1ypp1qern8TYVNCUfLEBG/mVG8o /qRwRUUCtaUIvKdLJuT9d543MnpJisqRJF9bv8x4RDk=</X509Certificate>
+</X509Data>
+</KeyInfo>
+</Signature>
+</NFe>
+<protNFe versao="4.00">
+<infProt Id="ID131256308220257">
+<tpAmb>1</tpAmb>
+<verAplic>W-1.5.51</verAplic>
+<chNFe>31250503624675000108650010000013821012603640</chNFe>
+<dhRecbto>2025-05-02T10:03:17-03:00</dhRecbto>
+<nProt>131256308220257</nProt>
+<digVal>xCnJ7rsd+0BwSiJvPpDogLUAx0U=</digVal>
+<cStat>100</cStat>
+<xMotivo>Autorizado o uso da NF-e</xMotivo>
+</infProt>
+</protNFe>
+</nfeProc>

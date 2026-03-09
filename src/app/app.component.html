@@ -1,0 +1,27 @@
+<div class="container">
+  <h1>NFSe to Sintegra Converter</h1>
+  
+  <div class="upload-section">
+    <input type="file" #fileInput (change)="onFileSelected($event)" accept=".xml" class="file-input">
+    <button (click)="fileInput.click()" class="upload-btn">Select XML File (NFe/NFCe/NFSe)</button>
+    <p *ngIf="selectedFile" class="file-info">Selected: {{selectedFile.name}}</p>
+  </div>
+
+  <div class="actions" *ngIf="selectedFile">
+    <button (click)="convertFile()" [disabled]="isProcessing" class="convert-btn">
+      {{isProcessing ? 'Converting...' : 'Convert to Sintegra'}}
+    </button>
+  </div>
+
+  <div class="result-section" *ngIf="conversionResult">
+    <h3>Conversion Result</h3>
+    <div class="result-info">
+      <p>{{conversionResult.documentCount}} {{conversionResult.documentType}} records processed</p>
+      <button (click)="downloadSintegraFile()" class="download-btn">Download Sintegra File</button>
+    </div>
+  </div>
+
+  <div class="error-section" *ngIf="errorMessage">
+    <div class="error-message">{{errorMessage}}</div>
+  </div>
+</div>

@@ -1,0 +1,115 @@
+.container {
+  max-width: 800px;
+  margin: 50px auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.upload-section {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.3s;
+}
+
+.upload-btn:hover {
+  background: #0056b3;
+}
+
+.file-info {
+  margin-top: 15px;
+  color: #666;
+  font-style: italic;
+}
+
+.actions {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.convert-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.3s;
+}
+
+.convert-btn:hover:not(:disabled) {
+  background: #218838;
+}
+
+.convert-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.result-section {
+  background: #d4edda;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #c3e6cb;
+}
+
+.result-section h3 {
+  color: #155724;
+  margin-bottom: 15px;
+}
+
+.result-info p {
+  margin-bottom: 15px;
+  color: #155724;
+}
+
+.download-btn {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.download-btn:hover {
+  background: #138496;
+}
+
+.error-section {
+  background: #f8d7da;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #f5c6cb;
+}
+
+.error-message {
+  color: #721c24;
+  font-weight: bold;
+}
