@@ -1,27 +1,348 @@
-<div class="container">
-  <h1>NFSe to Sintegra Converter</h1>
-  
-  <div class="upload-section">
-    <input type="file" #fileInput (change)="onFileSelected($event)" accept=".xml" class="file-input">
-    <button (click)="fileInput.click()" class="upload-btn">Select XML File (NFe/NFCe/NFSe)</button>
-    <p *ngIf="selectedFile" class="file-info">Selected: {{selectedFile.name}}</p>
-  </div>
+<div class="shell">
+  <!-- Ambient glow -->
+  <div class="ambient-glow"></div>
 
-  <div class="actions" *ngIf="selectedFile">
-    <button (click)="convertFile()" [disabled]="isProcessing" class="convert-btn">
-      {{isProcessing ? 'Converting...' : 'Convert to Sintegra'}}
-    </button>
-  </div>
-
-  <div class="result-section" *ngIf="conversionResult">
-    <h3>Conversion Result</h3>
-    <div class="result-info">
-      <p>{{conversionResult.documentCount}} {{conversionResult.documentType}} records processed</p>
-      <button (click)="downloadSintegraFile()" class="download-btn">Download Sintegra File</button>
+  <!-- Header -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect x="2" y="2" width="24" height="24" rx="4" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M8 9h12M8 14h8M8 19h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="22" cy="19" r="3" fill="currentColor" opacity="0.3"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-name">SINTEGRA<span class="brand-dot">.</span></h1>
+        <p class="brand-sub">Conversor Fiscal</p>
+      </div>
     </div>
-  </div>
+    <div class="header-badge">
+      <span class="badge-dot"></span>
+      Conv. ICMS 57/95
+    </div>
+  </header>
 
-  <div class="error-section" *ngIf="errorMessage">
-    <div class="error-message">{{errorMessage}}</div>
-  </div>
+  <!-- Pipeline Steps -->
+  <nav class="pipeline">
+    <button
+      class="pipe-step"
+      [class.active]="currentStep === 'upload'"
+      [class.done]="isParsed"
+      (click)="goToStep('upload')"
+    >
+      <span class="pipe-num">01</span>
+      <span class="pipe-label">Importar</span>
+    </button>
+    <div class="pipe-line" [class.filled]="isParsed"></div>
+    <button
+      class="pipe-step"
+      [class.active]="currentStep === 'config'"
+      [class.done]="generationResult?.content"
+      (click)="isParsed ? goToStep('config') : null"
+      [disabled]="!isParsed"
+    >
+      <span class="pipe-num">02</span>
+      <span class="pipe-label">Configurar</span>
+    </button>
+    <div class="pipe-line" [class.filled]="generationResult?.content"></div>
+    <button
+      class="pipe-step"
+      [class.active]="currentStep === 'result'"
+      (click)="generationResult?.content ? goToStep('result') : null"
+      [disabled]="!generationResult?.content"
+    >
+      <span class="pipe-num">03</span>
+      <span class="pipe-label">Exportar</span>
+    </button>
+  </nav>
+
+  <!-- ==================== STEP 1: UPLOAD ==================== -->
+  <main class="content" *ngIf="currentStep === 'upload'">
+    <div class="section-header">
+      <h2>Importar documentos</h2>
+      <p>Arraste ou selecione XMLs de <strong>NFe</strong>, <strong>NFCe</strong> ou <strong>NFSe</strong></p>
+    </div>
+
+    <div
+      class="dropzone"
+      (click)="fileInput.click()"
+      (dragover)="$event.preventDefault()"
+      (drop)="$event.preventDefault()"
+    >
+      <div class="dropzone-inner">
+        <div class="dropzone-icon">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path d="M20 6v20M12 14l8-8 8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 28v4a2 2 0 002 2h24a2 2 0 002-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="dropzone-text">Selecionar arquivos <span class="dropzone-ext">.xml</span></p>
+        <p class="dropzone-hint">ou arraste aqui</p>
+      </div>
+      <input
+        type="file"
+        #fileInput
+        (change)="onFilesSelected($event)"
+        accept=".xml"
+        multiple
+        class="sr-only"
+      />
+    </div>
+
+    <!-- File list -->
+    <div class="file-list" *ngIf="selectedFiles.length > 0">
+      <div class="file-row" *ngFor="let f of selectedFiles; let i = index">
+        <div class="file-icon">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 1h5l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M9 1v4h4" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <span class="file-name">{{ f.name }}</span>
+        <span class="file-meta">{{ f.size }}</span>
+        <button class="file-remove" (click)="removeFile(i)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="action-bar" *ngIf="selectedFiles.length > 0">
+      <button class="btn btn-primary" (click)="parseFiles()" [disabled]="isProcessing">
+        <span *ngIf="!isProcessing">Processar {{ selectedFiles.length }} arquivo{{ selectedFiles.length > 1 ? 's' : '' }}</span>
+        <span *ngIf="isProcessing" class="loading-text">
+          <span class="spinner"></span> Processando...
+        </span>
+      </button>
+    </div>
+
+    <!-- Success info -->
+    <div class="notice notice-success" *ngIf="isParsed">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span><strong>{{ parsedDocuments.length }}</strong> documento(s) &mdash; {{ documentType }}</span>
+    </div>
+
+    <!-- Errors -->
+    <div class="notice notice-error" *ngFor="let err of parseErrors">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <span>{{ err }}</span>
+    </div>
+  </main>
+
+  <!-- ==================== STEP 2: CONFIG ==================== -->
+  <main class="content" *ngIf="currentStep === 'config'">
+    <div class="section-header">
+      <h2>Dados do estabelecimento</h2>
+      <p>Informacoes para os registros <span class="mono-tag">10</span> e <span class="mono-tag">11</span> do SINTEGRA</p>
+    </div>
+
+    <form [formGroup]="configForm" (ngSubmit)="generateSintegra()">
+      <!-- Registro 10 -->
+      <fieldset class="fieldset">
+        <legend>
+          <span class="legend-tag">REG 10</span>
+          Identificacao
+        </legend>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label>CNPJ</label>
+            <input formControlName="cnpj" placeholder="00000000000000" maxlength="14" class="input mono" />
+          </div>
+          <div class="field">
+            <label>Inscricao Estadual</label>
+            <input formControlName="inscricaoEstadual" placeholder="ISENTO" maxlength="14" class="input mono" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Razao Social</label>
+          <input formControlName="razaoSocial" maxlength="35" class="input" />
+        </div>
+
+        <div class="grid grid-3">
+          <div class="field" style="flex:2">
+            <label>Municipio</label>
+            <input formControlName="municipio" maxlength="30" class="input" />
+          </div>
+          <div class="field" style="flex:0 0 80px">
+            <label>UF</label>
+            <input formControlName="uf" maxlength="2" class="input mono" />
+          </div>
+          <div class="field">
+            <label>Fax</label>
+            <input formControlName="fax" maxlength="10" class="input mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Periodo Inicial</label>
+            <input formControlName="dtInicial" placeholder="YYYYMMDD" maxlength="8" class="input mono" />
+          </div>
+          <div class="field">
+            <label>Periodo Final</label>
+            <input formControlName="dtFinal" placeholder="YYYYMMDD" maxlength="8" class="input mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="field">
+            <label>Estrutura</label>
+            <select formControlName="codEstrutura" class="input">
+              <option value="1">1 — Conv. 31/99</option>
+              <option value="2">2 — Conv. 69/02</option>
+              <option value="3">3 — Atual</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Natureza</label>
+            <select formControlName="codNatureza" class="input">
+              <option value="1">1 — Interestadual c/ ST</option>
+              <option value="2">2 — Interestadual</option>
+              <option value="3">3 — Todas</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Finalidade</label>
+            <select formControlName="codFinalidade" class="input">
+              <option value="1">1 — Normal</option>
+              <option value="2">2 — Retificacao</option>
+              <option value="3">3 — Aditiva</option>
+              <option value="5">5 — Cancelamento</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Registro 11 -->
+      <fieldset class="fieldset">
+        <legend>
+          <span class="legend-tag">REG 11</span>
+          Endereco
+        </legend>
+
+        <div class="grid grid-2">
+          <div class="field" style="flex:3">
+            <label>Logradouro</label>
+            <input formControlName="logradouro" maxlength="34" class="input" />
+          </div>
+          <div class="field" style="flex:0 0 100px">
+            <label>Numero</label>
+            <input formControlName="numero" maxlength="5" class="input mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="field">
+            <label>Complemento</label>
+            <input formControlName="complemento" maxlength="22" class="input" />
+          </div>
+          <div class="field">
+            <label>Bairro</label>
+            <input formControlName="bairro" maxlength="15" class="input" />
+          </div>
+          <div class="field" style="flex:0 0 120px">
+            <label>CEP</label>
+            <input formControlName="cep" placeholder="00000000" maxlength="8" class="input mono" />
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Contato</label>
+            <input formControlName="contato" maxlength="28" class="input" />
+          </div>
+          <div class="field">
+            <label>Telefone</label>
+            <input formControlName="telefone" maxlength="12" class="input mono" />
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="action-bar action-bar-split">
+        <button type="button" class="btn btn-ghost" (click)="goToStep('upload')">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Voltar
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="!configForm.valid">
+          Gerar SINTEGRA
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <!-- ==================== STEP 3: RESULT ==================== -->
+  <main class="content" *ngIf="currentStep === 'result'">
+    <div class="section-header">
+      <h2>Arquivo gerado</h2>
+      <p>Pronto para download</p>
+    </div>
+
+    <!-- Errors -->
+    <div class="notice notice-error" *ngFor="let err of generationResult?.validationErrors || []">
+      {{ err }}
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" *ngIf="generationResult?.content">
+      <div class="stat-card">
+        <span class="stat-number">{{ generationResult!.totalRecords }}</span>
+        <span class="stat-label">Registros</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{ parsedDocuments.length }}</span>
+        <span class="stat-label">Documentos</span>
+      </div>
+      <div class="stat-card accent">
+        <span class="stat-number stat-text">{{ documentType.split('(')[0].trim() }}</span>
+        <span class="stat-label">Tipo</span>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-block" *ngIf="previewLines.length > 0">
+      <div class="preview-header">
+        <span class="mono-tag">PREVIEW</span>
+        <span class="preview-meta">{{ previewLines.length }} linhas &middot; 126 chars/linha</span>
+      </div>
+      <pre class="preview-code"><code>{{ previewLines.join('\n') }}</code></pre>
+    </div>
+
+    <div class="action-bar action-bar-split">
+      <button class="btn btn-ghost" (click)="goToStep('config')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Voltar
+      </button>
+      <button class="btn btn-primary btn-download" (click)="downloadFile()" *ngIf="generationResult?.content">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M9 3v9M5 9l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 14v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Download .txt
+      </button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>SINTEGRA Converter</span>
+    <span class="footer-sep">&middot;</span>
+    <span>Convenio ICMS 57/95</span>
+  </footer>
 </div>

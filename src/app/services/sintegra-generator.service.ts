@@ -1,504 +1,434 @@
 import { Injectable } from '@angular/core';
-import { NFSeData } from './nfse-parser.service';
-import { NFEData } from './nfe-parser.service';
-import { NFCEData } from './nfce-parser.service';
-
-export interface SintegraConfiguration {
-  cnpj: string;
-  inscricaoEstadual: string;
-  razaoSocial: string;
-  municipio: string;
-  uf: string;
-  codigoMunicipio: string;
-  cep: string;
-  telefone: string;
-  codigoAtividadeEconomica: string;
-  dtInicial: string;
-  dtFinal: string;
-  codigoIdentificacaoConvenio: string;
-  codigoFinalidadeArquivo: string;
-  codigoNaturezaOperacao: string;
-}
+import { SintegraFormatterService } from './sintegra-formatter.service';
+import {
+  SintegraConfig,
+  SintegraGenerationResult,
+  SINTEGRA_LINE_ENDING,
+  ParsedDocument,
+  NFeDocument,
+  NFSeDocument,
+  DocumentItem,
+  isNFeDocument,
+  isNFSeDocument,
+} from '../models';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SintegraGeneratorService {
+  constructor(private fmt: SintegraFormatterService) {}
 
-  constructor() { }
+  generateFile(docs: ParsedDocument[], config: SintegraConfig): SintegraGenerationResult {
+    const validationErrors = this.validateConfig(config);
+    if (validationErrors.length > 0) {
+      return {
+        content: '',
+        totalRecords: 0,
+        registerCounts: new Map(),
+        validationErrors,
+      };
+    }
 
-  generateSintegraFile(data: any[], config: SintegraConfiguration): string {
-    const lines: string[] = [];
-    
-    lines.push(this.generateRegister10(config));
-    lines.push(this.generateRegister11(config));
-    
-    data.forEach(item => {
-      if (this.isNFSeData(item)) {
-        lines.push(this.generateRegister50FromNFSe(item));
-        lines.push(this.generateRegister51FromNFSe(item));
-      } else if (this.isNFEData(item)) {
-        lines.push(this.generateRegister50FromNFE(item));
-        const register51 = this.generateRegister51FromNFE(item);
-        if (register51) {
-          lines.push(register51);
-        }
-      } else if (this.isNFCEData(item)) {
-        lines.push(this.generateRegister50FromNFCE(item));
-        // NFCe typically doesn't have register 51 (IPI)
+    const records: string[] = [];
+
+    records.push(this.generateRegister10(config));
+    records.push(this.generateRegister11(config));
+
+    const productCodes = new Set<string>();
+
+    for (const doc of docs) {
+      if (isNFeDocument(doc)) {
+        records.push(...this.generateRegister50FromNFe(doc, config));
+        records.push(...this.generateRegister54FromNFe(doc));
+        doc.itens.forEach((item) => productCodes.add(item.codigoProduto));
+      } else if (isNFSeDocument(doc)) {
+        records.push(...this.generateRegister50FromNFSe(doc, config));
       }
-    });
-    
-    lines.push(this.generateRegister90(lines.length + 1, config.cnpj));
-    
-    return lines.join('\r\n');
-  }
-
-  private generateRegister10(config: SintegraConfiguration): string {
-    const registro = '10';
-    const cnpj = this.validateAndFormatCNPJ(config.cnpj);
-    const inscricaoEstadual = this.validateInscricaoEstadual(config.inscricaoEstadual);
-    const razaoSocial = (config.razaoSocial || 'NOME OBRIGATORIO').padEnd(35, ' ').substring(0, 35);
-    const municipio = (config.municipio || 'MUNICIPIO OBRIGATORIO').padEnd(30, ' ').substring(0, 30);
-    const uf = config.uf.padEnd(2, ' ').substring(0, 2);
-    const cep = config.cep.replace(/\D/g, '').padStart(8, '0');
-    const telefone = config.telefone.replace(/\D/g, '').padStart(12, '0');
-    const codigoAtividadeEconomica = config.codigoAtividadeEconomica.padStart(8, '0');
-    const dtInicial = this.validateAndFormatDate(config.dtInicial, this.getFirstDayOfMonth());
-    const dtFinal = this.validateAndFormatDateFinal(config.dtFinal, this.getLastDayOfMonth());
-    const codigoIdentificacaoConvenio = this.validateCodigoConvenio(config.codigoIdentificacaoConvenio);
-    const codigoFinalidadeArquivo = config.codigoFinalidadeArquivo || '1';
-    const codigoNaturezaOperacao = this.validateCodigoNaturezaOperacao(config.codigoNaturezaOperacao);
-    const brancos = ''.padEnd(1, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + razaoSocial + municipio + uf + cep + telefone + codigoAtividadeEconomica + dtInicial + dtFinal + codigoIdentificacaoConvenio + codigoFinalidadeArquivo + codigoNaturezaOperacao + brancos).padEnd(126, ' ');
-  }
-
-  private generateRegister11(config: SintegraConfiguration): string {
-    const registro = '11';
-    const endereco = ''.padEnd(34, ' ');
-    const numero = ''.padEnd(5, ' ');
-    const complemento = ''.padEnd(22, ' ');
-    const bairro = ''.padEnd(15, ' ');
-    const cep = config.cep.replace(/\D/g, '').padStart(8, '0');
-    const responsavel = ''.padEnd(28, ' ');
-    const telefone = config.telefone.replace(/\D/g, '').padStart(12, '0');
-    const brancos = ''.padEnd(1, ' ');
-    
-    return (registro + endereco + numero + complemento + bairro + cep + responsavel + telefone + brancos).padEnd(126, ' ');
-  }
-
-  private generateRegister50FromNFSe(nfse: NFSeData): string {
-    const registro = '50';
-    const cnpj = this.validateAndFormatCNPJ(nfse.cnpjPrestador);
-    const inscricaoEstadual = 'ISENTO'.padEnd(14, ' ').substring(0, 14);
-    const dataEmissao = this.validateAndFormatDate(nfse.dataEmissao);
-    const uf = 'MG';
-    const codigoMunicipio = '31000'.padStart(5, '0');
-    const modelo = '22';
-    const serie = '000';
-    const numero = nfse.numeroNota.padStart(6, '0');
-    const cfop = '5933';
-    const emitente = 'P';
-    const valorTotal = this.formatValue(nfse.valorServicos);
-    const baseCalculoIcms = '000000000000000';
-    const valorIcms = '000000000000000';
-    const valorIsencao = '000000000000000';
-    const valorOutras = '000000000000000';
-    const aliquotaIcms = '0000';
-    const situacao = 'N';
-    const brancos = ''.padEnd(29, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + dataEmissao + uf + codigoMunicipio + modelo + serie + numero + cfop + emitente + valorTotal + baseCalculoIcms + valorIcms + valorIsencao + valorOutras + aliquotaIcms + situacao + brancos).padEnd(126, ' ');
-  }
-
-  private generateRegister51FromNFSe(nfse: NFSeData): string {
-    const registro = '51';
-    const cnpj = this.validateAndFormatCNPJ(nfse.cnpjTomador);
-    const inscricaoEstadual = 'ISENTO'.padEnd(14, ' ').substring(0, 14);
-    const dataEmissao = this.validateAndFormatDate(nfse.dataEmissao);
-    const uf = 'MG';
-    const codigoMunicipio = '31000'.padStart(5, '0');
-    const modelo = '22';
-    const serie = '000';
-    const numero = nfse.numeroNota.padStart(6, '0');
-    const cfop = '5933';
-    const valorTotal = this.formatValue(nfse.valorServicos);
-    const baseCalculoIcms = '000000000000000';
-    const valorIcms = '000000000000000';
-    const valorOutras = '000000000000000';
-    const brancos = ''.padEnd(38, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + dataEmissao + uf + codigoMunicipio + modelo + serie + numero + cfop + valorTotal + baseCalculoIcms + valorIcms + valorOutras + brancos).padEnd(126, ' ');
-  }
-
-  private generateRegister90(totalRecords: number, cnpjEmpresa: string): string {
-    const registro = '90';
-    const cnpj = this.validateAndFormatCNPJ(cnpjEmpresa);
-    const inscricaoEstadual = 'ISENTO'.padEnd(14, ' ').substring(0, 14);
-    const totalizadorRegistros = totalRecords.toString().padStart(8, '0');
-    const brancos = ''.padEnd(89, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + totalizadorRegistros + brancos).padEnd(126, ' ');
-  }
-
-  private formatDate(dateString: string): string {
-    if (!dateString) return '00000000';
-    
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '00000000';
-    
-    const year = date.getFullYear().toString();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    
-    return year + month + day;
-  }
-
-  private validateAndFormatCNPJ(cnpj: string): string {
-    if (!cnpj) {
-      throw new Error('CNPJ é obrigatório');
-    }
-    
-    const cleanCNPJ = cnpj.replace(/\D/g, '');
-    
-    if (cleanCNPJ.length !== 14) {
-      throw new Error('CNPJ deve ter 14 dígitos');
-    }
-    
-    if (/^(\d)\1{13}$/.test(cleanCNPJ)) {
-      throw new Error('CNPJ não pode ter todos os dígitos iguais');
-    }
-    
-    return cleanCNPJ;
-  }
-
-  private validateAndFormatDate(dateString: string, defaultDate?: string): string {
-    if (!dateString || dateString === '00/00/0000' || dateString === '00000000') {
-      if (defaultDate) {
-        return this.validateAndFormatDate(defaultDate);
-      }
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0');
-      const day = '01';
-      return year.toString() + month + day;
-    }
-    
-    let date: Date;
-    if (dateString.includes('/')) {
-      const parts = dateString.split('/');
-      if (parts.length === 3) {
-        date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-      } else {
-        date = new Date(dateString);
-      }
-    } else if (dateString.length === 8) {
-      const year = parseInt(dateString.substring(0, 4));
-      const month = parseInt(dateString.substring(4, 6)) - 1;
-      const day = parseInt(dateString.substring(6, 8));
-      date = new Date(year, month, day);
-    } else {
-      date = new Date(dateString);
-    }
-    
-    if (isNaN(date.getTime())) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0');
-      const day = '01';
-      return year.toString() + month + day;
-    }
-    
-    const year = date.getFullYear();
-    if (year < 1993) {
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0');
-      const day = '01';
-      return currentYear.toString() + month + day;
-    }
-    
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    
-    return year.toString() + month + day;
-  }
-
-  private validateAndFormatDateFinal(dateString: string, defaultDate?: string): string {
-    if (!dateString || dateString === '00/00/0000' || dateString === '00000000') {
-      if (defaultDate) {
-        return this.validateAndFormatDateFinal(defaultDate);
-      }
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0');
-      const lastDayOfMonth = new Date(year, today.getMonth() + 1, 0).getDate();
-      const day = lastDayOfMonth.toString().padStart(2, '0');
-      return year.toString() + month + day;
-    }
-    
-    let date: Date;
-    if (dateString.includes('/')) {
-      const parts = dateString.split('/');
-      if (parts.length === 3) {
-        date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-      } else {
-        date = new Date(dateString);
-      }
-    } else if (dateString.length === 8) {
-      const year = parseInt(dateString.substring(0, 4));
-      const month = parseInt(dateString.substring(4, 6)) - 1;
-      const day = parseInt(dateString.substring(6, 8));
-      date = new Date(year, month, day);
-    } else {
-      date = new Date(dateString);
-    }
-    
-    if (isNaN(date.getTime())) {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0');
-      const lastDayOfMonth = new Date(year, today.getMonth() + 1, 0).getDate();
-      const day = lastDayOfMonth.toString().padStart(2, '0');
-      return year.toString() + month + day;
-    }
-    
-    const year = date.getFullYear();
-    if (year < 1993) {
-      const today = new Date();
-      const currentYear = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0');
-      const lastDayOfMonth = new Date(currentYear, today.getMonth() + 1, 0).getDate();
-      const day = lastDayOfMonth.toString().padStart(2, '0');
-      return currentYear.toString() + month + day;
-    }
-    
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    
-    // Validate that the final date should be the last day of the month
-    const lastDayOfMonth = new Date(year, date.getMonth() + 1, 0).getDate();
-    if (date.getDate() !== lastDayOfMonth) {
-      const lastDay = lastDayOfMonth.toString().padStart(2, '0');
-      return year.toString() + month + lastDay;
-    }
-    
-    return year.toString() + month + day;
-  }
-
-  private formatValue(value: number): string {
-    if (!value || isNaN(value)) return '000000000000000';
-    
-    const centavos = Math.round(value * 100);
-    return centavos.toString().padStart(15, '0');
-  }
-
-  private validateSintegraFile(content: string): boolean {
-    const lines = content.split('\n');
-    
-    if (lines.length < 3) return false;
-    
-    if (!lines[0].startsWith('10')) return false;
-    if (!lines[1].startsWith('11')) return false;
-    if (!lines[lines.length - 1].startsWith('90')) return false;
-    
-    return lines.every(line => line.length === 126);
-  }
-
-  private formatCNPJ(cnpj: string): string {
-    return cnpj.replace(/\D/g, '').padStart(14, '0');
-  }
-
-  private formatText(text: string, length: number): string {
-    return text.padEnd(length, ' ').substring(0, length);
-  }
-
-  private formatNumeric(value: string, length: number): string {
-    return value.replace(/\D/g, '').padStart(length, '0');
-  }
-
-  // Type guards
-  private isNFSeData(item: any): item is NFSeData {
-    return item && 'cnpjPrestador' in item && 'cnpjTomador' in item;
-  }
-
-  private isNFEData(item: any): item is NFEData {
-    return item && 'cnpjEmitente' in item && 'cnpjDestinatario' in item;
-  }
-
-  private isNFCEData(item: any): item is NFCEData {
-    return item && 'cnpjEmitente' in item && 'cpfConsumidor' in item;
-  }
-
-  // Register 50 generators for different document types
-  private generateRegister50FromNFE(nfe: NFEData): string {
-    const registro = '50';
-    const cnpj = this.validateAndFormatCNPJ(nfe.cnpjEmitente);
-    const inscricaoEstadual = 'ISENTO'.padEnd(14, ' ').substring(0, 14);
-    const dataEmissao = this.validateAndFormatDate(nfe.dataEmissao);
-    const uf = nfe.uf;
-    const codigoMunicipio = nfe.codigoMunicipio.padStart(5, '0');
-    const modelo = '55'; // NFe model
-    const serie = nfe.serie.padStart(3, '0');
-    const numero = nfe.numeroNota.padStart(6, '0');
-    const cfop = nfe.cfop;
-    const emitente = 'P';
-    const valorTotal = this.formatValue(nfe.valorTotalNota);
-    const baseCalculoIcms = this.formatValue(nfe.valorTotalNota); // Simplified - should be calculated
-    const valorIcms = this.formatValue(nfe.valorIcms);
-    const valorIsencao = '000000000000000';
-    const valorOutras = this.formatValue(nfe.valorOutros);
-    const aliquotaIcms = '0000'; // Simplified
-    const situacao = 'N';
-    const brancos = ''.padEnd(29, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + dataEmissao + uf + codigoMunicipio + modelo + serie + numero + cfop + emitente + valorTotal + baseCalculoIcms + valorIcms + valorIsencao + valorOutras + aliquotaIcms + situacao + brancos).padEnd(126, ' ');
-  }
-
-  private generateRegister50FromNFCE(nfce: NFCEData): string {
-    const registro = '50';
-    const cnpj = this.validateAndFormatCNPJ(nfce.cnpjEmitente);
-    const inscricaoEstadual = 'ISENTO'.padEnd(14, ' ').substring(0, 14);
-    const dataEmissao = this.validateAndFormatDate(nfce.dataEmissao);
-    const uf = nfce.uf;
-    const codigoMunicipio = nfce.codigoMunicipio.padStart(5, '0');
-    const modelo = '65'; // NFCe model
-    const serie = nfce.serie.padStart(3, '0');
-    const numero = nfce.numeroNota.padStart(6, '0');
-    const cfop = nfce.cfop;
-    const emitente = 'P';
-    const valorTotal = this.formatValue(nfce.valorTotalNota);
-    const baseCalculoIcms = this.formatValue(nfce.valorTotalNota); // Simplified
-    const valorIcms = this.formatValue(nfce.valorIcms);
-    const valorIsencao = '000000000000000';
-    const valorOutras = this.formatValue(nfce.valorOutros);
-    const aliquotaIcms = '0000'; // Simplified
-    const situacao = 'N';
-    const brancos = ''.padEnd(29, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + dataEmissao + uf + codigoMunicipio + modelo + serie + numero + cfop + emitente + valorTotal + baseCalculoIcms + valorIcms + valorIsencao + valorOutras + aliquotaIcms + situacao + brancos).padEnd(126, ' ');
-  }
-
-  // Register 51 generators for different document types
-  private generateRegister51FromNFE(nfe: NFEData): string {
-    // Only generate register 51 if there's IPI
-    if (nfe.valorIpi <= 0) {
-      return '';
     }
 
-    const registro = '51';
-    const cnpj = this.validateAndFormatCNPJ(nfe.cnpjDestinatario || '');
-    const inscricaoEstadual = 'ISENTO'.padEnd(14, ' ').substring(0, 14);
-    const dataEmissao = this.validateAndFormatDate(nfe.dataEmissao);
-    const uf = nfe.uf;
-    const codigoMunicipio = nfe.codigoMunicipio.padStart(5, '0');
-    const modelo = '55'; // NFe model
-    const serie = nfe.serie.padStart(3, '0');
-    const numero = nfe.numeroNota.padStart(6, '0');
-    const cfop = nfe.cfop;
-    const valorTotal = this.formatValue(nfe.valorTotalNota);
-    const baseCalculoIcms = this.formatValue(nfe.valorTotalNota); // Simplified
-    const valorIcms = this.formatValue(nfe.valorIcms);
-    const valorOutras = this.formatValue(nfe.valorOutros);
-    const brancos = ''.padEnd(38, ' ');
-    
-    return (registro + cnpj + inscricaoEstadual + dataEmissao + uf + codigoMunicipio + modelo + serie + numero + cfop + valorTotal + baseCalculoIcms + valorIcms + valorOutras + brancos).padEnd(126, ' ');
-  }
+    const nfeDocs = docs.filter(isNFeDocument);
+    if (productCodes.size > 0) {
+      records.push(...this.generateRegister75(nfeDocs, config));
+    }
 
-  generateSintegraConfiguration(): SintegraConfiguration {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    
+    records.push(...this.generateRegister90(records, config));
+
+    const registerCounts = this.countRegisters(records);
+
     return {
-      cnpj: '03624675000108',
-      inscricaoEstadual: '1234567890123',
-      razaoSocial: 'CRISTIANE MACIENTE SCALIONI BRITO',
-      municipio: 'MUNICIPIO OBRIGATORIO',
-      uf: 'MG',
-      codigoMunicipio: '31000',
-      cep: '00000000',
-      telefone: '000000000000',
-      codigoAtividadeEconomica: '00000000',
-      dtInicial: this.formatDate(firstDay.toISOString().split('T')[0]),
-      dtFinal: this.formatDate(lastDay.toISOString().split('T')[0]),
-      codigoIdentificacaoConvenio: '3',
-      codigoFinalidadeArquivo: '1',
-      codigoNaturezaOperacao: '03'
+      content: records.join(SINTEGRA_LINE_ENDING),
+      totalRecords: records.length,
+      registerCounts,
+      validationErrors: [],
     };
   }
 
-  generateSintegraConfigurationFromData(data: any[]): SintegraConfiguration {
-    const config = this.generateSintegraConfiguration();
-    
-    if (data.length > 0) {
-      const firstItem = data[0];
-      
-      if (this.isNFSeData(firstItem)) {
-        config.cnpj = firstItem.cnpjPrestador || '';
-        config.razaoSocial = firstItem.razaoSocialPrestador || '';
-      } else if (this.isNFEData(firstItem)) {
-        config.cnpj = firstItem.cnpjEmitente || '';
-        config.razaoSocial = firstItem.razaoSocialEmitente || '';
-      } else if (this.isNFCEData(firstItem)) {
-        config.cnpj = firstItem.cnpjEmitente || '';
-        config.razaoSocial = firstItem.razaoSocialEmitente || '';
-        config.uf = firstItem.uf || 'MG';
+  private validateConfig(config: SintegraConfig): string[] {
+    const errors: string[] = [];
+    if (!config.cnpj || !this.fmt.validateCNPJ(config.cnpj)) {
+      errors.push('CNPJ invalido ou nao informado');
+    }
+    if (!config.razaoSocial) {
+      errors.push('Razao Social e obrigatoria');
+    }
+    if (!config.uf || config.uf.length !== 2) {
+      errors.push('UF invalida');
+    }
+    if (!config.municipio) {
+      errors.push('Municipio e obrigatorio');
+    }
+    return errors;
+  }
+
+  // ========== REGISTRO 10 - Identificacao do Estabelecimento ==========
+  // tipo(2) + cnpj(14) + ie(14) + nome(35) + municipio(30) + uf(2) + fax(10) + dt_ini(8) + dt_fim(8) + cod_estrutura(1) + cod_natureza(1) + cod_finalidade(1) = 126
+  private generateRegister10(config: SintegraConfig): string {
+    const dtIni = config.dtInicial || this.fmt.formatDate(this.fmt.getFirstDayOfMonth());
+    const dtFim = config.dtFinal || this.fmt.formatDate(this.fmt.getLastDayOfMonth());
+
+    const record =
+      '10' +
+      this.fmt.formatCNPJ(config.cnpj) +
+      this.fmt.formatAlpha(config.inscricaoEstadual || 'ISENTO', 14) +
+      this.fmt.formatAlpha(config.razaoSocial, 35) +
+      this.fmt.formatAlpha(config.municipio, 30) +
+      this.fmt.formatAlpha(config.uf, 2) +
+      this.fmt.formatNumeric(config.fax, 10) +
+      this.fmt.formatNumeric(dtIni, 8) +
+      this.fmt.formatNumeric(dtFim, 8) +
+      config.codEstrutura +
+      config.codNatureza +
+      config.codFinalidade;
+
+    return this.fmt.assertLength(record, '10');
+  }
+
+  // ========== REGISTRO 11 - Dados Complementares ==========
+  // tipo(2) + logradouro(34) + numero(5) + complemento(22) + bairro(15) + cep(8) + contato(28) + telefone(12) = 126
+  private generateRegister11(config: SintegraConfig): string {
+    const record =
+      '11' +
+      this.fmt.formatAlpha(config.logradouro, 34) +
+      this.fmt.formatNumeric(config.numero, 5) +
+      this.fmt.formatAlpha(config.complemento, 22) +
+      this.fmt.formatAlpha(config.bairro, 15) +
+      this.fmt.formatNumeric(config.cep, 8) +
+      this.fmt.formatAlpha(config.contato, 28) +
+      this.fmt.formatNumeric(config.telefone, 12);
+
+    return this.fmt.assertLength(record, '11');
+  }
+
+  // ========== REGISTRO 50 - Totais de Nota Fiscal ==========
+  // tipo(2) + cnpj(14) + ie(14) + data(8) + uf(2) + modelo(2) + serie(3) + numero(6) + cfop(4) + emitente(1) + vl_total(13) + bc_icms(13) + vl_icms(13) + isenta(13) + outras(13) + aliquota(4) + situacao(1) = 126
+  private generateRegister50FromNFe(doc: NFeDocument, config: SintegraConfig): string[] {
+    const records: string[] = [];
+
+    // Group items by CFOP + aliquota for proper register 50 generation
+    const groups = this.groupItemsByCfopAliquota(doc.itens);
+
+    for (const group of groups) {
+      const vlTotal = group.items.reduce((sum, i) => sum + i.valorTotal, 0);
+      const bcIcms = group.items.reduce((sum, i) => sum + i.baseCalculoIcms, 0);
+      const vlIcms = group.items.reduce((sum, i) => sum + i.valorIcms, 0);
+      const isenta = group.items
+        .filter((i) => this.isIsentoOuNaoTributado(i.cst))
+        .reduce((sum, i) => sum + i.valorTotal, 0);
+      const outras = group.items
+        .filter((i) => this.isOutras(i.cst))
+        .reduce((sum, i) => sum + i.valorTotal, 0);
+
+      const cnpjContraparte = this.isSaida(group.cfop)
+        ? doc.cnpjDestinatario || doc.cnpjEmitente
+        : doc.cnpjEmitente;
+      const ieContraparte = this.isSaida(group.cfop)
+        ? doc.ieDestinatario || 'ISENTO'
+        : doc.ieEmitente || 'ISENTO';
+      const ufContraparte = this.isSaida(group.cfop)
+        ? doc.ufDestinatario || doc.ufEmitente
+        : doc.ufEmitente;
+
+      const record =
+        '50' +
+        this.fmt.formatCNPJ(cnpjContraparte) +
+        this.fmt.formatAlpha(ieContraparte, 14) +
+        this.fmt.formatDate(doc.dataEmissao) +
+        this.fmt.formatAlpha(ufContraparte, 2) +
+        this.fmt.formatNumeric(doc.modelo, 2) +
+        this.fmt.formatAlpha(doc.serie, 3) +
+        this.fmt.formatNumeric(doc.numeroNota, 6) +
+        this.fmt.formatNumeric(group.cfop, 4) +
+        'P' +
+        this.fmt.formatMoney(vlTotal, 13) +
+        this.fmt.formatMoney(bcIcms, 13) +
+        this.fmt.formatMoney(vlIcms, 13) +
+        this.fmt.formatMoney(isenta, 13) +
+        this.fmt.formatMoney(outras, 13) +
+        this.fmt.formatNumeric(Math.round(group.aliquota * 100).toString(), 4) +
+        doc.situacao;
+
+      records.push(this.fmt.assertLength(record, '50'));
+    }
+
+    // If no items or no groups, generate single record with totals
+    if (records.length === 0) {
+      const cfop = doc.itens.length > 0 ? doc.itens[0].cfop : '5102';
+      const record =
+        '50' +
+        this.fmt.formatCNPJ(doc.cnpjEmitente) +
+        this.fmt.formatAlpha(doc.ieEmitente || 'ISENTO', 14) +
+        this.fmt.formatDate(doc.dataEmissao) +
+        this.fmt.formatAlpha(doc.ufEmitente, 2) +
+        this.fmt.formatNumeric(doc.modelo, 2) +
+        this.fmt.formatAlpha(doc.serie, 3) +
+        this.fmt.formatNumeric(doc.numeroNota, 6) +
+        this.fmt.formatNumeric(cfop, 4) +
+        'P' +
+        this.fmt.formatMoney(doc.valorTotalNota, 13) +
+        this.fmt.formatMoney(doc.baseCalculoIcms, 13) +
+        this.fmt.formatMoney(doc.valorIcms, 13) +
+        this.fmt.formatMoney(0, 13) +
+        this.fmt.formatMoney(doc.valorOutros, 13) +
+        this.fmt.formatNumeric('0000', 4) +
+        doc.situacao;
+
+      records.push(this.fmt.assertLength(record, '50'));
+    }
+
+    return records;
+  }
+
+  private generateRegister50FromNFSe(doc: NFSeDocument, config: SintegraConfig): string[] {
+    // NFSe maps to SINTEGRA with model 99 (outros) or configurable
+    // ISS services typically don't have ICMS, so base/icms = 0
+    const record =
+      '50' +
+      this.fmt.formatCNPJ(doc.cnpjPrestador) +
+      this.fmt.formatAlpha(doc.iePrestador || 'ISENTO', 14) +
+      this.fmt.formatDate(doc.dataEmissao) +
+      this.fmt.formatAlpha(doc.ufPrestacao || config.uf, 2) +
+      '99' + // Modelo 99 - outros documentos
+      '000' + // Serie
+      this.fmt.formatNumeric(doc.numeroNota, 6) +
+      '1933' + // CFOP para servicos
+      'P' +
+      this.fmt.formatMoney(doc.valorServicos, 13) +
+      this.fmt.formatMoney(0, 13) + // bc_icms = 0 (servico ISS)
+      this.fmt.formatMoney(0, 13) + // vl_icms = 0
+      this.fmt.formatMoney(doc.valorServicos, 13) + // isenta/nao tributada (ISS, nao ICMS)
+      this.fmt.formatMoney(0, 13) + // outras
+      '0000' + // aliquota ICMS = 0
+      'N'; // situacao normal
+
+    return [this.fmt.assertLength(record, '50')];
+  }
+
+  // ========== REGISTRO 54 - Itens de Nota Fiscal ==========
+  // tipo(2) + cnpj(14) + modelo(2) + serie(3) + numero(6) + cfop(4) + cst(3) + num_item(3) + cod_produto(14) + quantidade(11,8v3) + vl_produto(12,10v2) + desconto(12,10v2) + bc_icms(12,10v2) + bc_icms_st(12,10v2) + vl_ipi(12,10v2) + aliquota(4,2v2) = 126
+  private generateRegister54FromNFe(doc: NFeDocument): string[] {
+    return doc.itens.map((item) => {
+      const record =
+        '54' +
+        this.fmt.formatCNPJ(doc.cnpjEmitente) +
+        this.fmt.formatNumeric(doc.modelo, 2) +
+        this.fmt.formatAlpha(doc.serie, 3) +
+        this.fmt.formatNumeric(doc.numeroNota, 6) +
+        this.fmt.formatNumeric(item.cfop, 4) +
+        this.fmt.formatAlpha(item.cst, 3) +
+        this.fmt.formatNumeric(item.numeroItem.toString(), 3) +
+        this.fmt.formatAlpha(item.codigoProduto, 14) +
+        this.fmt.formatQuantity(item.quantidade, 11, 3) +
+        this.fmt.formatMoney(item.valorTotal, 12) +
+        this.fmt.formatMoney(item.valorDesconto, 12) +
+        this.fmt.formatMoney(item.baseCalculoIcms, 12) +
+        this.fmt.formatMoney(item.baseCalculoIcmsSt, 12) +
+        this.fmt.formatMoney(item.valorIpi, 12) +
+        this.fmt.formatNumeric(Math.round(item.aliquotaIcms * 100).toString(), 4);
+
+      return this.fmt.assertLength(record, '54');
+    });
+  }
+
+  // ========== REGISTRO 75 - Tabela de Codigo de Produto/Servico ==========
+  // tipo(2) + dt_ini(8) + dt_fim(8) + cod_produto(14) + cod_ncm(8) + descricao(53) + unidade(6) + aliq_ipi(5,3v2) + aliq_icms(4,2v2) + reducao_bc(5,3v2) + bc_icms_st(13,11v2) = 126
+  private generateRegister75(nfeDocs: NFeDocument[], config: SintegraConfig): string[] {
+    const dtIni = config.dtInicial || this.fmt.formatDate(this.fmt.getFirstDayOfMonth());
+    const dtFim = config.dtFinal || this.fmt.formatDate(this.fmt.getLastDayOfMonth());
+
+    const productMap = new Map<
+      string,
+      { item: DocumentItem; aliquotaIcms: number }
+    >();
+
+    for (const doc of nfeDocs) {
+      for (const item of doc.itens) {
+        if (!productMap.has(item.codigoProduto)) {
+          productMap.set(item.codigoProduto, {
+            item,
+            aliquotaIcms: item.aliquotaIcms,
+          });
+        }
       }
     }
-    
+
+    return Array.from(productMap.values()).map(({ item }) => {
+      const record =
+        '75' +
+        this.fmt.formatNumeric(dtIni, 8) +
+        this.fmt.formatNumeric(dtFim, 8) +
+        this.fmt.formatAlpha(item.codigoProduto, 14) +
+        this.fmt.formatAlpha(item.ncm, 8) +
+        this.fmt.formatAlpha(item.descricao, 53) +
+        this.fmt.formatAlpha(item.unidade, 6) +
+        this.fmt.formatNumeric(Math.round(item.aliquotaIpi * 100).toString(), 5) +
+        this.fmt.formatNumeric(Math.round(item.aliquotaIcms * 100).toString(), 4) +
+        this.fmt.formatNumeric('0', 5) + // reducao base ICMS
+        this.fmt.formatMoney(item.baseCalculoIcmsSt, 13);
+
+      return this.fmt.assertLength(record, '75');
+    });
+  }
+
+  // ========== REGISTRO 90 - Totalizacao ==========
+  // tipo(2) + cnpj(14) + ie(14) + [tipo_reg(2) + qtd(8)]* + brancos + num_reg90(1) at pos 126
+  private generateRegister90(existingRecords: string[], config: SintegraConfig): string[] {
+    // Count records by type (exclude 10, 11, and 90)
+    const counts = new Map<string, number>();
+    for (const record of existingRecords) {
+      const tipo = record.substring(0, 2);
+      if (tipo !== '10' && tipo !== '11') {
+        counts.set(tipo, (counts.get(tipo) || 0) + 1);
+      }
+    }
+
+    // Total including all records + reg90 itself
+    const totalRecords = existingRecords.length + 1; // +1 for the reg90 we're adding
+
+    const cnpj = this.fmt.formatCNPJ(config.cnpj);
+    const ie = this.fmt.formatAlpha(config.inscricaoEstadual || 'ISENTO', 14);
+
+    // Build type counts string: [tipo(2) + qtd(8)] for each type
+    let typeCounts = '';
+    const sortedTypes = Array.from(counts.keys()).sort();
+    for (const tipo of sortedTypes) {
+      typeCounts += tipo + this.fmt.formatNumeric(counts.get(tipo)!.toString(), 8);
+    }
+    // Add grand total with type "99"
+    typeCounts += '99' + this.fmt.formatNumeric(totalRecords.toString(), 8);
+
+    const header = '90' + cnpj + ie; // 2 + 14 + 14 = 30 chars
+    const availableSpace = 126 - 30 - 1; // -1 for num_reg90 at pos 126
+
+    // If typeCounts fits in one record
+    if (typeCounts.length <= availableSpace) {
+      const padding = ''.padEnd(availableSpace - typeCounts.length, ' ');
+      const record = header + typeCounts + padding + '1';
+      return [this.fmt.assertLength(record, '90')];
+    }
+
+    // Split across multiple reg90 records
+    const records: string[] = [];
+    let remaining = typeCounts;
+    while (remaining.length > 0) {
+      const chunk = remaining.substring(0, availableSpace);
+      remaining = remaining.substring(availableSpace);
+      const padding = ''.padEnd(availableSpace - chunk.length, ' ');
+      records.push(header + chunk + padding + '0'); // placeholder for count
+    }
+
+    // Set the num_reg90 field (number of reg90 records) in each record
+    const numReg90 = records.length.toString();
+    return records.map((r) => {
+      const fixed = r.substring(0, 125) + numReg90;
+      return this.fmt.assertLength(fixed, '90');
+    });
+  }
+
+  // ========== Helpers ==========
+
+  private groupItemsByCfopAliquota(
+    items: DocumentItem[]
+  ): { cfop: string; aliquota: number; items: DocumentItem[] }[] {
+    const groups = new Map<string, { cfop: string; aliquota: number; items: DocumentItem[] }>();
+
+    for (const item of items) {
+      const key = `${item.cfop}-${item.aliquotaIcms}`;
+      if (!groups.has(key)) {
+        groups.set(key, { cfop: item.cfop, aliquota: item.aliquotaIcms, items: [] });
+      }
+      groups.get(key)!.items.push(item);
+    }
+
+    return Array.from(groups.values());
+  }
+
+  private isSaida(cfop: string): boolean {
+    const firstDigit = cfop.charAt(0);
+    return firstDigit === '5' || firstDigit === '6' || firstDigit === '7';
+  }
+
+  private isIsentoOuNaoTributado(cst: string): boolean {
+    const lastTwo = cst.substring(cst.length - 2);
+    return ['30', '40', '41', '50'].includes(lastTwo);
+  }
+
+  private isOutras(cst: string): boolean {
+    const lastTwo = cst.substring(cst.length - 2);
+    return ['51', '60', '90'].includes(lastTwo);
+  }
+
+  private countRegisters(records: string[]): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const record of records) {
+      const tipo = record.substring(0, 2);
+      counts.set(tipo, (counts.get(tipo) || 0) + 1);
+    }
+    return counts;
+  }
+
+  generateDefaultConfig(docs: ParsedDocument[]): SintegraConfig {
+    const config: SintegraConfig = {
+      cnpj: '',
+      inscricaoEstadual: '',
+      razaoSocial: '',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cep: '',
+      municipio: '',
+      uf: 'MG',
+      fax: '',
+      contato: '',
+      telefone: '',
+      dtInicial: this.fmt.formatDate(this.fmt.getFirstDayOfMonth()),
+      dtFinal: this.fmt.formatDate(this.fmt.getLastDayOfMonth()),
+      codEstrutura: '3',
+      codNatureza: '3',
+      codFinalidade: '1',
+    };
+
+    if (docs.length === 0) return config;
+
+    const first = docs[0];
+    if (isNFeDocument(first)) {
+      config.cnpj = first.cnpjEmitente;
+      config.inscricaoEstadual = first.ieEmitente || 'ISENTO';
+      config.razaoSocial = first.razaoSocialEmitente;
+      config.logradouro = first.logradouroEmitente;
+      config.numero = first.numeroEnderecoEmitente;
+      config.bairro = first.bairroEmitente;
+      config.cep = first.cepEmitente;
+      config.municipio = first.municipioEmitente;
+      config.uf = first.ufEmitente || 'MG';
+      config.telefone = first.telefoneEmitente;
+    } else if (isNFSeDocument(first)) {
+      config.cnpj = first.cnpjPrestador;
+      config.inscricaoEstadual = first.iePrestador || 'ISENTO';
+      config.razaoSocial = first.razaoSocialPrestador;
+      config.uf = first.ufPrestacao || 'MG';
+    }
+
     return config;
-  }
-
-  private getFirstDayOfMonth(): string {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    return firstDay.toISOString().split('T')[0];
-  }
-
-  private getLastDayOfMonth(): string {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    
-    // Always set to the 31st day of the month for SINTEGRA validation
-    const lastDay = new Date(year, month, 31);
-    
-    return lastDay.toISOString().split('T')[0];
-  }
-
-  private validateInscricaoEstadual(inscricaoEstadual: string): string {
-    if (!inscricaoEstadual || inscricaoEstadual.trim() === '' || inscricaoEstadual.toUpperCase() === 'ISENTO') {
-      return '1234567890123'.padEnd(14, ' ').substring(0, 14);
-    }
-    
-    const cleanIE = inscricaoEstadual.replace(/\D/g, '');
-    
-    if (cleanIE.length < 8) {
-      return '1234567890123'.padEnd(14, ' ').substring(0, 14);
-    }
-    
-    return cleanIE.padEnd(14, ' ').substring(0, 14);
-  }
-
-  private validateCodigoConvenio(codigoConvenio: string): string {
-    const validCodes = ['1', '2', '3', '4', '5'];
-    
-    if (!codigoConvenio || codigoConvenio === 'ISENTO' || codigoConvenio === '0' || !validCodes.includes(codigoConvenio)) {
-      return '3';
-    }
-    
-    return codigoConvenio;
-  }
-
-  private validateCodigoNaturezaOperacao(codigoNatureza: string): string {
-    const validCodes = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'];
-    
-    if (!codigoNatureza || codigoNatureza === 'ISENTO' || codigoNatureza === '0' || !validCodes.includes(codigoNatureza)) {
-      return '03';
-    }
-    
-    return codigoNatureza;
   }
 }
