@@ -114,7 +114,7 @@
           </svg>
         </div>
         <span class="flow-label">Configurar</span>
-        <span class="flow-detail">CNPJ, IE, Endereco</span>
+        <span class="flow-detail">CNPJ, IE, Endereço</span>
       </div>
 
       <!-- Animated connector 2 -->
@@ -236,7 +236,7 @@
             <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/>
             <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <span>Historico de conversoes</span>
+          <span>Histórico de conversões</span>
           <span class="history-count">{{ history.length }}</span>
         </div>
         <button class="btn-text" (click)="clearHistory()">Limpar</button>
@@ -285,7 +285,7 @@
           </svg>
         </button>
         <span class="pagination-info">{{ historyPage + 1 }} / {{ historyTotalPages }}</span>
-        <button class="btn-icon" (click)="historyNext()" [disabled]="historyPage >= historyTotalPages - 1" title="Proxima">
+        <button class="btn-icon" (click)="historyNext()" [disabled]="historyPage >= historyTotalPages - 1" title="Próxima">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -297,7 +297,7 @@
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
           <path d="M6.5 1L1.5 3.5v3c0 3 2.2 5.2 5 6 2.8-.8 5-3 5-6v-3L6.5 1z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <span>Seus dados ficam apenas no seu navegador. Nao armazenamos nenhuma informacao em servidores.</span>
+        <span>Seus dados ficam apenas no seu navegador. Não armazenamos nenhuma informação em servidores.</span>
       </div>
     </section>
   </main>
@@ -306,7 +306,7 @@
   <main class="content" *ngIf="currentStep === 'config'">
     <div class="section-header">
       <h2>Dados do estabelecimento</h2>
-      <p>Informacoes para os registros <span class="mono-tag">10</span> e <span class="mono-tag">11</span> do SINTEGRA</p>
+      <p>Informações para os registros <span class="mono-tag">10</span> e <span class="mono-tag">11</span> do SINTEGRA</p>
     </div>
 
     <form [formGroup]="configForm" (ngSubmit)="generateSintegra()">
@@ -314,7 +314,7 @@
       <fieldset class="fieldset">
         <legend>
           <span class="legend-tag">REG 10</span>
-          Identificacao
+          Identificação
         </legend>
 
         <div class="grid grid-2">
@@ -323,19 +323,19 @@
             <input formControlName="cnpj" placeholder="00000000000000" maxlength="14" class="input mono" />
           </div>
           <div class="field">
-            <label>Inscricao Estadual</label>
+            <label>Inscrição Estadual</label>
             <input formControlName="inscricaoEstadual" placeholder="ISENTO" maxlength="14" class="input mono" />
           </div>
         </div>
 
         <div class="field">
-          <label>Razao Social</label>
+          <label>Razão Social</label>
           <input formControlName="razaoSocial" maxlength="35" class="input" />
         </div>
 
         <div class="grid grid-3">
           <div class="field" style="flex:2">
-            <label>Municipio</label>
+            <label>Município</label>
             <input formControlName="municipio" maxlength="30" class="input" />
           </div>
           <div class="field" style="flex:0 0 80px">
@@ -350,11 +350,11 @@
 
         <div class="grid grid-2">
           <div class="field">
-            <label>Periodo Inicial</label>
+            <label>Período Inicial</label>
             <input formControlName="dtInicial" placeholder="YYYYMMDD" maxlength="8" class="input mono" />
           </div>
           <div class="field">
-            <label>Periodo Final</label>
+            <label>Período Final</label>
             <input formControlName="dtFinal" placeholder="YYYYMMDD" maxlength="8" class="input mono" />
           </div>
         </div>
@@ -380,7 +380,7 @@
             <label>Finalidade</label>
             <select formControlName="codFinalidade" class="input">
               <option value="1">1 — Normal</option>
-              <option value="2">2 — Retificacao</option>
+              <option value="2">2 — Retificação</option>
               <option value="3">3 — Aditiva</option>
               <option value="5">5 — Cancelamento</option>
             </select>
@@ -392,7 +392,7 @@
       <fieldset class="fieldset">
         <legend>
           <span class="legend-tag">REG 11</span>
-          Endereco
+          Endereço
         </legend>
 
         <div class="grid grid-2">
@@ -401,7 +401,7 @@
             <input formControlName="logradouro" maxlength="34" class="input" />
           </div>
           <div class="field" style="flex:0 0 100px">
-            <label>Numero</label>
+            <label>Número</label>
             <input formControlName="numero" maxlength="5" class="input mono" />
           </div>
         </div>
@@ -508,6 +508,6 @@
   <footer class="footer">
     <span>SINTEGRA Converter</span>
     <span class="footer-sep">&middot;</span>
-    <span>Convenio ICMS 57/95</span>
+    <span>Convênio ICMS 57/95</span>
   </footer>
 </div>
