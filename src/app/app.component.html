@@ -1,27 +1,242 @@
-<div class="container">
-  <h1>NFSe to Sintegra Converter</h1>
-  
-  <div class="upload-section">
-    <input type="file" #fileInput (change)="onFileSelected($event)" accept=".xml" class="file-input">
-    <button (click)="fileInput.click()" class="upload-btn">Select XML File (NFe/NFCe/NFSe)</button>
-    <p *ngIf="selectedFile" class="file-info">Selected: {{selectedFile.name}}</p>
-  </div>
+<div class="app-container">
+  <!-- Header -->
+  <header class="app-header">
+    <h1>SINTEGRA Converter</h1>
+    <p class="subtitle">Converta arquivos XML de NFe, NFCe e NFSe para o formato SINTEGRA</p>
+  </header>
 
-  <div class="actions" *ngIf="selectedFile">
-    <button (click)="convertFile()" [disabled]="isProcessing" class="convert-btn">
-      {{isProcessing ? 'Converting...' : 'Convert to Sintegra'}}
-    </button>
-  </div>
-
-  <div class="result-section" *ngIf="conversionResult">
-    <h3>Conversion Result</h3>
-    <div class="result-info">
-      <p>{{conversionResult.documentCount}} {{conversionResult.documentType}} records processed</p>
-      <button (click)="downloadSintegraFile()" class="download-btn">Download Sintegra File</button>
+  <!-- Steps indicator -->
+  <div class="steps">
+    <div class="step" [class.active]="currentStep === 'upload'" [class.done]="isParsed" (click)="goToStep('upload')">
+      <span class="step-number">1</span>
+      <span class="step-label">Upload XML</span>
+    </div>
+    <div class="step-divider"></div>
+    <div class="step" [class.active]="currentStep === 'config'" [class.done]="generationResult?.content" (click)="isParsed ? goToStep('config') : null">
+      <span class="step-number">2</span>
+      <span class="step-label">Configuracao</span>
+    </div>
+    <div class="step-divider"></div>
+    <div class="step" [class.active]="currentStep === 'result'" (click)="generationResult?.content ? goToStep('result') : null">
+      <span class="step-number">3</span>
+      <span class="step-label">Resultado</span>
     </div>
   </div>
 
-  <div class="error-section" *ngIf="errorMessage">
-    <div class="error-message">{{errorMessage}}</div>
-  </div>
+  <!-- Step 1: Upload -->
+  <section class="card" *ngIf="currentStep === 'upload'">
+    <h2>Selecione os arquivos XML</h2>
+    <p class="hint">Suporta NFe (modelo 55), NFCe (modelo 65) e NFSe. Voce pode selecionar multiplos arquivos.</p>
+
+    <div class="upload-area" (click)="fileInput.click()">
+      <div class="upload-icon">&#128196;</div>
+      <p>Clique para selecionar arquivos XML</p>
+      <input
+        type="file"
+        #fileInput
+        (change)="onFilesSelected($event)"
+        accept=".xml"
+        multiple
+        class="hidden-input"
+      />
+    </div>
+
+    <div class="file-list" *ngIf="selectedFiles.length > 0">
+      <div class="file-item" *ngFor="let f of selectedFiles; let i = index">
+        <span class="file-name">{{ f.name }}</span>
+        <span class="file-size">{{ f.size }}</span>
+        <button class="btn-remove" (click)="removeFile(i)" title="Remover">&times;</button>
+      </div>
+    </div>
+
+    <div class="actions" *ngIf="selectedFiles.length > 0">
+      <button
+        class="btn btn-primary"
+        (click)="parseFiles()"
+        [disabled]="isProcessing"
+      >
+        {{ isProcessing ? 'Processando...' : 'Processar Arquivos' }}
+      </button>
+    </div>
+
+    <div class="info-box" *ngIf="isParsed">
+      <strong>{{ parsedDocuments.length }}</strong> documento(s) encontrado(s)
+      <span *ngIf="documentType"> - {{ documentType }}</span>
+    </div>
+
+    <div class="error-list" *ngIf="parseErrors.length > 0">
+      <div class="error-item" *ngFor="let err of parseErrors">{{ err }}</div>
+    </div>
+  </section>
+
+  <!-- Step 2: Configuration -->
+  <section class="card" *ngIf="currentStep === 'config'">
+    <h2>Dados do Estabelecimento (Registros 10/11)</h2>
+    <p class="hint">Esses dados serao usados nos registros de cabecalho do arquivo SINTEGRA. Os campos em destaque sao obrigatorios.</p>
+
+    <form [formGroup]="configForm" (ngSubmit)="generateSintegra()">
+      <div class="form-section">
+        <h3>Identificacao (Registro 10)</h3>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cnpj">CNPJ *</label>
+            <input id="cnpj" formControlName="cnpj" placeholder="00000000000000" maxlength="14" />
+          </div>
+          <div class="form-group">
+            <label for="inscricaoEstadual">Inscricao Estadual</label>
+            <input id="inscricaoEstadual" formControlName="inscricaoEstadual" placeholder="ISENTO" maxlength="14" />
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label for="razaoSocial">Razao Social *</label>
+          <input id="razaoSocial" formControlName="razaoSocial" maxlength="35" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="municipio">Municipio *</label>
+            <input id="municipio" formControlName="municipio" maxlength="30" />
+          </div>
+          <div class="form-group small">
+            <label for="uf">UF *</label>
+            <input id="uf" formControlName="uf" maxlength="2" />
+          </div>
+          <div class="form-group">
+            <label for="fax">Fax</label>
+            <input id="fax" formControlName="fax" maxlength="10" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="dtInicial">Data Inicial (YYYYMMDD)</label>
+            <input id="dtInicial" formControlName="dtInicial" placeholder="20260301" maxlength="8" />
+          </div>
+          <div class="form-group">
+            <label for="dtFinal">Data Final (YYYYMMDD)</label>
+            <input id="dtFinal" formControlName="dtFinal" placeholder="20260331" maxlength="8" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group small">
+            <label for="codEstrutura">Cod. Estrutura</label>
+            <select id="codEstrutura" formControlName="codEstrutura">
+              <option value="1">1 - Conv. 31/99</option>
+              <option value="2">2 - Conv. 69/02</option>
+              <option value="3">3 - Versao atual</option>
+            </select>
+          </div>
+          <div class="form-group small">
+            <label for="codNatureza">Cod. Natureza</label>
+            <select id="codNatureza" formControlName="codNatureza">
+              <option value="1">1 - Apenas interest. c/ ST</option>
+              <option value="2">2 - Interestadual</option>
+              <option value="3">3 - Todas operacoes</option>
+            </select>
+          </div>
+          <div class="form-group small">
+            <label for="codFinalidade">Cod. Finalidade</label>
+            <select id="codFinalidade" formControlName="codFinalidade">
+              <option value="1">1 - Normal</option>
+              <option value="2">2 - Retificacao total</option>
+              <option value="3">3 - Retificacao aditiva</option>
+              <option value="5">5 - Cancelamento</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Endereco (Registro 11)</h3>
+
+        <div class="form-row">
+          <div class="form-group wide">
+            <label for="logradouro">Logradouro</label>
+            <input id="logradouro" formControlName="logradouro" maxlength="34" />
+          </div>
+          <div class="form-group small">
+            <label for="numero">Numero</label>
+            <input id="numero" formControlName="numero" maxlength="5" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="complemento">Complemento</label>
+            <input id="complemento" formControlName="complemento" maxlength="22" />
+          </div>
+          <div class="form-group">
+            <label for="bairro">Bairro</label>
+            <input id="bairro" formControlName="bairro" maxlength="15" />
+          </div>
+          <div class="form-group small">
+            <label for="cep">CEP</label>
+            <input id="cep" formControlName="cep" placeholder="00000000" maxlength="8" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group wide">
+            <label for="contato">Contato</label>
+            <input id="contato" formControlName="contato" maxlength="28" />
+          </div>
+          <div class="form-group">
+            <label for="telefone">Telefone</label>
+            <input id="telefone" formControlName="telefone" maxlength="12" />
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-secondary" (click)="goToStep('upload')">Voltar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="!configForm.valid">
+          Gerar Arquivo SINTEGRA
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Step 3: Result -->
+  <section class="card" *ngIf="currentStep === 'result'">
+    <h2>Arquivo SINTEGRA Gerado</h2>
+
+    <div class="error-list" *ngIf="generationResult?.validationErrors?.length">
+      <div class="error-item" *ngFor="let err of generationResult!.validationErrors">{{ err }}</div>
+    </div>
+
+    <div class="result-stats" *ngIf="generationResult?.content">
+      <div class="stat">
+        <span class="stat-value">{{ generationResult!.totalRecords }}</span>
+        <span class="stat-label">Registros</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ parsedDocuments.length }}</span>
+        <span class="stat-label">Documentos</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">{{ documentType }}</span>
+        <span class="stat-label">Tipo</span>
+      </div>
+    </div>
+
+    <div class="preview" *ngIf="previewLines.length > 0">
+      <h3>Preview (primeiras {{ previewLines.length }} linhas)</h3>
+      <pre class="preview-content"><code>{{ previewLines.join('\n') }}</code></pre>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" (click)="goToStep('config')">Voltar</button>
+      <button class="btn btn-primary" (click)="downloadFile()" *ngIf="generationResult?.content">
+        Download SINTEGRA (.txt)
+      </button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>SINTEGRA Converter - Convenio ICMS 57/95</p>
+  </footer>
 </div>

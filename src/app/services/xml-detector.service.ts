@@ -1,97 +1,72 @@
 import { Injectable } from '@angular/core';
 import * as xml2js from 'xml2js';
-
-export enum XmlType {
-  NFE = 'NFE',
-  NFCE = 'NFCE',
-  NFSE = 'NFSE',
-  UNKNOWN = 'UNKNOWN'
-}
+import { XmlDocumentType } from '../models';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class XmlDetectorService {
+  async detectFromFile(file: File): Promise<{ type: XmlDocumentType; parsed: any }> {
+    const xmlContent = await this.readFile(file);
+    const parsed = await this.parseXml(xmlContent);
+    const type = this.identifyType(parsed);
+    return { type, parsed };
+  }
 
-  constructor() { }
-
-  async detectXmlType(file: File): Promise<XmlType> {
+  private readFile(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const xmlContent = e.target?.result as string;
-        this.detectXmlTypeFromString(xmlContent)
-          .then(resolve)
-          .catch(reject);
-      };
-      reader.onerror = () => reject(new Error('Error reading file'));
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onerror = () => reject(new Error('Erro ao ler o arquivo'));
       reader.readAsText(file);
     });
   }
 
-  private async detectXmlTypeFromString(xmlString: string): Promise<XmlType> {
-    return new Promise((resolve) => {
-      xml2js.parseString(xmlString, { 
-        explicitArray: false,
-        mergeAttrs: true,
-        normalize: true,
-        normalizeTags: true,
-        trim: true
-      }, (err, result) => {
-        if (err) {
-          resolve(XmlType.UNKNOWN);
-          return;
+  private parseXml(xmlString: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      xml2js.parseString(
+        xmlString,
+        {
+          explicitArray: false,
+          mergeAttrs: true,
+          normalize: true,
+          normalizeTags: true,
+          trim: true,
+          tagNameProcessors: [xml2js.processors.stripPrefix],
+        },
+        (err, result) => {
+          if (err) {
+            reject(new Error('Erro ao processar XML: ' + err.message));
+            return;
+          }
+          resolve(result);
         }
-
-        try {
-          const xmlType = this.identifyXmlType(result);
-          resolve(xmlType);
-        } catch (error) {
-          resolve(XmlType.UNKNOWN);
-        }
-      });
+      );
     });
   }
 
-  private identifyXmlType(parsedXml: any): XmlType {
-    // Check for NFe/NFCe structure
-    if (parsedXml.nfeproc || parsedXml.nfe) {
-      const nfeElement = parsedXml.nfeproc?.nfe || parsedXml.nfe;
-      const infNfe = nfeElement?.infnfe;
-      
-      if (infNfe?.ide?.mod) {
-        const modelo = infNfe.ide.mod;
-        if (modelo === '55') {
-          return XmlType.NFE;
-        } else if (modelo === '65') {
-          return XmlType.NFCE;
-        }
-      }
+  private identifyType(parsed: any): XmlDocumentType {
+    if (parsed.nfeproc || parsed.nfe) {
+      const nfe = parsed.nfeproc?.nfe || parsed.nfe;
+      const infNfe = nfe?.infnfe;
+      const modelo = infNfe?.ide?.mod;
+
+      if (modelo === '65') return XmlDocumentType.NFCE;
+      if (modelo === '55') return XmlDocumentType.NFE;
+
+      return XmlDocumentType.NFE;
     }
 
-    // Check for NFSe structure
-    if (parsedXml.nfse || parsedXml.nfseproc) {
-      return XmlType.NFSE;
+    if (parsed.nfse || parsed.nfseproc || parsed.rps || parsed.loterps) {
+      return XmlDocumentType.NFSE;
     }
 
-    // Check for other common NFSe structures
-    if (parsedXml.rps || parsedXml.lote || parsedXml.loterps) {
-      return XmlType.NFSE;
-    }
-
-    // Check for specific NFSe elements
-    if (parsedXml.servico || parsedXml.prestadorservico || parsedXml.tomadorservico) {
-      return XmlType.NFSE;
-    }
-
-    // Check root element names that might indicate NFSe
-    const rootKeys = Object.keys(parsedXml).map(key => key.toLowerCase());
+    const rootKeys = Object.keys(parsed).map((k) => k.toLowerCase());
     const nfseIndicators = ['nfse', 'notafiscalservico', 'nfseproc', 'consultarnfse', 'listanfse'];
-    
-    if (rootKeys.some(key => nfseIndicators.some(indicator => key.includes(indicator)))) {
-      return XmlType.NFSE;
+    if (rootKeys.some((key) => nfseIndicators.some((ind) => key.includes(ind)))) {
+      return XmlDocumentType.NFSE;
     }
 
-    return XmlType.UNKNOWN;
+    return XmlDocumentType.UNKNOWN;
   }
 }
