@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR" data-critters-container>
+<head>
+  <meta charset="utf-8">
+  <title>SINTEGRA Converter — Conversor de XML (NFe, NFCe, NFSe) para SINTEGRA</title>
+  <base href="/nfse-sintegra-converter/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- SEO Meta -->
+  <meta name="description" content="Converta arquivos XML de NFe, NFCe e NFSe para o formato SINTEGRA (Convênio ICMS 57/95). Ferramenta online, gratuita e segura — seus dados ficam apenas no seu navegador.">
+  <meta name="keywords" content="SINTEGRA, conversor, NFe, NFCe, NFSe, XML, nota fiscal eletrônica, convênio ICMS 57/95, arquivo fiscal, gerador SINTEGRA, registro 10, registro 11, registro 50, registro 54, registro 75, registro 90, ICMS, fiscal, contabilidade">
+  <meta name="author" content="SINTEGRA Converter">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#d4892a">
+  <link rel="canonical" href="https://sintegra-converter.web.app/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://sintegra-converter.web.app/">
+  <meta property="og:title" content="SINTEGRA Converter — XML para SINTEGRA online">
+  <meta property="og:description" content="Converta NFe, NFCe e NFSe (XML) para o formato SINTEGRA (Convênio ICMS 57/95). Gratuito, sem cadastro, processamento 100% local no navegador.">
+  <meta property="og:site_name" content="SINTEGRA Converter">
+  <meta property="og:locale" content="pt_BR">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="SINTEGRA Converter — XML para SINTEGRA online">
+  <meta name="twitter:description" content="Converta NFe, NFCe e NFSe (XML) para o formato SINTEGRA (Convênio ICMS 57/95). Gratuito e seguro.">
+
+  <!-- Structured Data / JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "SINTEGRA Converter",
+    "alternateName": "Conversor de XML para SINTEGRA",
+    "url": "https://sintegra-converter.web.app",
+    "description": "Ferramenta online gratuita para converter arquivos XML de Nota Fiscal Eletrônica (NFe, NFCe, NFSe) para o formato SINTEGRA conforme Convênio ICMS 57/95. Processamento local, sem envio de dados para servidores.",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "BRL"
+    },
+    "featureList": [
+      "Conversão de NFe (Modelo 55) para SINTEGRA",
+      "Conversão de NFCe (Modelo 65) para SINTEGRA",
+      "Conversão de NFSe para SINTEGRA",
+      "Geração de registros 10, 11, 50, 54, 75 e 90",
+      "Processamento 100% local no navegador",
+      "Suporte a múltiplos arquivos XML",
+      "Histórico de conversões local",
+      "Tema claro e escuro"
+    ],
+    "inLanguage": "pt-BR",
+    "isAccessibleForFree": true
+  }
+  </script>
+
+  <!-- FAQ Structured Data for AI/Search -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "O que é o SINTEGRA Converter?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "É uma ferramenta online gratuita que converte arquivos XML de Notas Fiscais Eletrônicas (NFe, NFCe e NFSe) para o formato SINTEGRA, conforme o Convênio ICMS 57/95. O processamento é feito 100% no seu navegador, sem enviar dados para nenhum servidor."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quais tipos de nota fiscal são suportados?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O conversor suporta NFe (Nota Fiscal Eletrônica, Modelo 55), NFCe (Nota Fiscal de Consumidor Eletrônica, Modelo 65) e NFSe (Nota Fiscal de Serviços Eletrônica)."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quais registros SINTEGRA são gerados?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "São gerados os registros 10 (dados do contribuinte), 11 (endereço), 50 (operações fiscais), 54 (itens dos documentos), 75 (código de produtos) e 90 (totalização). Cada linha possui exatamente 126 caracteres conforme a especificação."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Meus dados são seguros?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sim. Todo o processamento ocorre localmente no seu navegador. Nenhum dado é enviado para servidores externos. O histórico de conversões é armazenado apenas no localStorage do seu navegador."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+<style>@import"https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap";:root{--bg-primary:#fafaf8;--bg-secondary:#f2f0ec;--bg-card:#ffffff;--bg-elevated:#f5f3ef;--bg-input:#ffffff;--text-primary:#1a1816;--text-secondary:#6b6560;--text-muted:#9a9490;--text-accent:#c47a1a;--accent:#d4892a;--accent-hover:#c47a1a;--accent-dim:rgba(212, 137, 42, .08);--accent-glow:rgba(212, 137, 42, .15);--success:#16a34a;--success-dim:rgba(22, 163, 74, .08);--error:#dc2626;--error-dim:rgba(220, 38, 38, .06);--border:rgba(0, 0, 0, .08);--border-hover:rgba(0, 0, 0, .15);--border-accent:rgba(212, 137, 42, .3);--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--font-display:"Outfit", sans-serif;--font-mono:"DM Mono", monospace;--shadow-sm:0 1px 2px rgba(0, 0, 0, .05);--shadow-md:0 4px 16px rgba(0, 0, 0, .08);--shadow-lg:0 8px 32px rgba(0, 0, 0, .1);--shadow-glow:0 0 40px rgba(212, 137, 42, .06);--select-arrow:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239a9490' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}*,*:before,*:after{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;padding:0;font-family:var(--font-display);background:var(--bg-primary);color:var(--text-primary);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;min-height:100vh;transition:background .3s ease,color .3s ease}</style><link rel="stylesheet" href="styles.c0c3883b55dc53f2.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles.c0c3883b55dc53f2.css"></noscript></head>
+<body>
+  <app-root></app-root>
+
+  <!-- Hidden semantic content for search engines and AI crawlers -->
+  <noscript>
+    <h1>SINTEGRA Converter — Conversor de XML para SINTEGRA</h1>
+    <p>Converta arquivos XML de NFe (Nota Fiscal Eletrônica), NFCe (Nota Fiscal de Consumidor Eletrônica) e NFSe (Nota Fiscal de Serviços Eletrônica) para o formato SINTEGRA, conforme o Convênio ICMS 57/95.</p>
+    <h2>Como funciona</h2>
+    <ol>
+      <li>Importe seus arquivos XML de notas fiscais (NFe, NFCe ou NFSe)</li>
+      <li>Configure os dados do estabelecimento (CNPJ, IE, Razão Social, Endereço)</li>
+      <li>Gere e baixe o arquivo SINTEGRA (.txt) com 126 caracteres por linha</li>
+    </ol>
+    <h2>Registros gerados</h2>
+    <ul>
+      <li>Registro 10 — Dados do contribuinte informante</li>
+      <li>Registro 11 — Dados complementares do informante</li>
+      <li>Registro 50 — Nota Fiscal (operações com ICMS)</li>
+      <li>Registro 54 — Produto (itens da nota fiscal)</li>
+      <li>Registro 75 — Código de produto ou serviço</li>
+      <li>Registro 90 — Totalização do arquivo</li>
+    </ul>
+    <p>Ferramenta gratuita, sem cadastro, processamento 100% local no navegador. Seus dados nunca saem do seu computador.</p>
+  </noscript>
+<script src="runtime.b52d96efd1364cfe.js" type="module"></script><script src="polyfills.0a717d216d2434d2.js" type="module"></script><script src="main.0a19373052ef8d59.js" type="module"></script></body>
+</html>
