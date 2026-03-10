@@ -228,6 +228,154 @@
       <span>{{ err }}</span>
     </div>
 
+    <!-- Parsed Documents Details (Expandable) -->
+    <section class="doc-details-section" *ngIf="isParsed && parsedDocuments.length > 0">
+      <button class="doc-details-toggle" (click)="toggleDocDetails()">
+        <div class="doc-details-toggle-left">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M5 6h6M5 8.5h4M5 11h5" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
+          </svg>
+          <span>Detalhes dos documentos</span>
+          <span class="doc-details-count">{{ parsedDocuments.length }}</span>
+        </div>
+        <svg class="doc-details-chevron" [class.rotated]="showDocDetails" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M4 5.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="doc-details-body" *ngIf="showDocDetails">
+        <div class="doc-card" *ngFor="let doc of parsedDocuments; let i = index">
+          <!-- Doc card header (always visible) -->
+          <button class="doc-card-header" (click)="toggleDocExpand(i)">
+            <div class="doc-card-summary">
+              <span class="doc-type-badge" [class.nfe]="isNFe(doc)" [class.nfse]="isNFSe(doc)">{{ doc.tipo }}</span>
+              <span class="doc-card-number">Nº {{ doc.numeroNota || '—' }}</span>
+              <span class="doc-card-sep">&middot;</span>
+              <span class="doc-card-date">{{ formatDateBr(doc.dataEmissao) }}</span>
+              <span class="doc-card-sep">&middot;</span>
+              <span class="doc-card-value" *ngIf="isNFe(doc)">{{ formatCurrency($any(doc).valorTotalNota) }}</span>
+              <span class="doc-card-value" *ngIf="isNFSe(doc)">{{ formatCurrency($any(doc).valorServicos) }}</span>
+            </div>
+            <svg class="doc-card-chevron" [class.rotated]="expandedDocIndex === i" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- Doc card expanded content -->
+          <div class="doc-card-content" *ngIf="expandedDocIndex === i">
+            <!-- NFe / NFCe fields -->
+            <ng-container *ngIf="isNFe(doc)">
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Emitente</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialEmitente }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Emitente</span>
+                  <span class="doc-field-value mono">{{ formatCnpj($any(doc).cnpjEmitente) }}</span>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Destinatário</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialDestinatario || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Destinatário</span>
+                  <span class="doc-field-value mono">{{ $any(doc).cnpjDestinatario ? formatCnpj($any(doc).cnpjDestinatario) : '—' }}</span>
+                </div>
+              </div>
+              <div class="doc-grid doc-grid-3">
+                <div class="doc-field">
+                  <span class="doc-field-label">Série</span>
+                  <span class="doc-field-value mono">{{ $any(doc).serie || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Modelo</span>
+                  <span class="doc-field-value mono">{{ $any(doc).modelo || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Natureza</span>
+                  <span class="doc-field-value">{{ $any(doc).naturezaOperacao || '—' }}</span>
+                </div>
+              </div>
+              <div class="doc-grid doc-grid-4">
+                <div class="doc-field">
+                  <span class="doc-field-label">Valor Produtos</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorProdutos) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">ICMS</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorIcms) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">IPI</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorIpi) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Total Nota</span>
+                  <span class="doc-field-value mono accent">{{ formatCurrency($any(doc).valorTotalNota) }}</span>
+                </div>
+              </div>
+              <div class="doc-items-summary" *ngIf="$any(doc).itens?.length">
+                <span class="doc-field-label">Itens</span>
+                <span class="doc-field-value mono">{{ $any(doc).itens.length }} produto(s)</span>
+              </div>
+            </ng-container>
+
+            <!-- NFSe fields -->
+            <ng-container *ngIf="isNFSe(doc)">
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Prestador</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialPrestador }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Prestador</span>
+                  <span class="doc-field-value mono">{{ formatCnpj($any(doc).cnpjPrestador) }}</span>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Tomador</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialTomador || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Tomador</span>
+                  <span class="doc-field-value mono">{{ $any(doc).cnpjTomador ? formatCnpj($any(doc).cnpjTomador) : '—' }}</span>
+                </div>
+              </div>
+              <div class="doc-grid doc-grid-3">
+                <div class="doc-field">
+                  <span class="doc-field-label">Valor Serviços</span>
+                  <span class="doc-field-value mono accent">{{ formatCurrency($any(doc).valorServicos) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">ISS</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorIss) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Alíquota ISS</span>
+                  <span class="doc-field-value mono">{{ $any(doc).aliquotaIss }}%</span>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Serviço</span>
+                  <span class="doc-field-value">{{ $any(doc).descricaoServico || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Município</span>
+                  <span class="doc-field-value">{{ $any(doc).municipioPrestacao || '—' }} / {{ $any(doc).ufPrestacao || '—' }}</span>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Conversion History -->
     <section class="history-section" *ngIf="history.length > 0">
       <div class="history-header">
@@ -454,7 +602,7 @@
   <main class="content" *ngIf="currentStep === 'result'">
     <div class="section-header">
       <h2>Arquivo gerado</h2>
-      <p>Pronto para download</p>
+      <p>Verifique os dados e faça o download</p>
     </div>
 
     <!-- Errors -->
@@ -478,6 +626,178 @@
       </div>
     </div>
 
+    <!-- Document Details for Review -->
+    <section class="result-docs" *ngIf="parsedDocuments.length > 0">
+      <div class="result-docs-header">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M8 1v6M8 11v.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+        <span>Confira os dados antes de baixar</span>
+      </div>
+
+      <div class="result-doc-list">
+        <div class="result-doc-card" *ngFor="let doc of parsedDocuments; let i = index">
+          <!-- Header row -->
+          <button class="result-doc-header" (click)="toggleResultDocExpand(i)">
+            <div class="doc-card-summary">
+              <span class="doc-type-badge" [class.nfe]="isNFe(doc)" [class.nfse]="isNFSe(doc)">{{ doc.tipo }}</span>
+              <span class="doc-card-number">Nº {{ doc.numeroNota || '—' }}</span>
+              <span class="doc-card-sep">&middot;</span>
+              <span class="doc-card-date">{{ formatDateBr(doc.dataEmissao) }}</span>
+              <span class="doc-card-sep">&middot;</span>
+              <span class="doc-card-value" *ngIf="isNFe(doc)">{{ formatCurrency($any(doc).valorTotalNota) }}</span>
+              <span class="doc-card-value" *ngIf="isNFSe(doc)">{{ formatCurrency($any(doc).valorServicos) }}</span>
+            </div>
+            <svg class="doc-card-chevron" [class.rotated]="expandedResultDocIndex === i" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <!-- Expanded content -->
+          <div class="result-doc-content" *ngIf="expandedResultDocIndex === i">
+            <!-- NFe / NFCe -->
+            <ng-container *ngIf="isNFe(doc)">
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Emitente</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialEmitente }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Emitente</span>
+                  <span class="doc-field-value mono">{{ formatCnpj($any(doc).cnpjEmitente) }}</span>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Destinatário</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialDestinatario || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Destinatário</span>
+                  <span class="doc-field-value mono">{{ $any(doc).cnpjDestinatario ? formatCnpj($any(doc).cnpjDestinatario) : '—' }}</span>
+                </div>
+              </div>
+              <div class="doc-grid doc-grid-3">
+                <div class="doc-field">
+                  <span class="doc-field-label">Série</span>
+                  <span class="doc-field-value mono">{{ $any(doc).serie || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Modelo</span>
+                  <span class="doc-field-value mono">{{ $any(doc).modelo || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Natureza</span>
+                  <span class="doc-field-value">{{ $any(doc).naturezaOperacao || '—' }}</span>
+                </div>
+              </div>
+              <div class="doc-grid doc-grid-4">
+                <div class="doc-field">
+                  <span class="doc-field-label">Valor Produtos</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorProdutos) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">ICMS</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorIcms) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">IPI</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorIpi) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Total Nota</span>
+                  <span class="doc-field-value mono accent">{{ formatCurrency($any(doc).valorTotalNota) }}</span>
+                </div>
+              </div>
+
+              <!-- Items table -->
+              <div class="items-table-wrap" *ngIf="$any(doc).itens?.length">
+                <div class="items-table-header">
+                  <span class="doc-field-label">Produtos / Itens</span>
+                  <span class="items-count">{{ $any(doc).itens.length }}</span>
+                </div>
+                <div class="items-table">
+                  <div class="items-table-head">
+                    <span class="it-col it-col-num">#</span>
+                    <span class="it-col it-col-code">Código</span>
+                    <span class="it-col it-col-desc">Descrição</span>
+                    <span class="it-col it-col-cfop">CFOP</span>
+                    <span class="it-col it-col-qty">Qtd</span>
+                    <span class="it-col it-col-unit">Un</span>
+                    <span class="it-col it-col-price">Unitário</span>
+                    <span class="it-col it-col-total">Total</span>
+                    <span class="it-col it-col-icms">ICMS</span>
+                    <span class="it-col it-col-ipi">IPI</span>
+                  </div>
+                  <div class="items-table-row" *ngFor="let item of $any(doc).itens">
+                    <span class="it-col it-col-num">{{ item.numeroItem }}</span>
+                    <span class="it-col it-col-code">{{ item.codigoProduto }}</span>
+                    <span class="it-col it-col-desc" [title]="item.descricao">{{ item.descricao }}</span>
+                    <span class="it-col it-col-cfop">{{ item.cfop }}</span>
+                    <span class="it-col it-col-qty">{{ item.quantidade }}</span>
+                    <span class="it-col it-col-unit">{{ item.unidade }}</span>
+                    <span class="it-col it-col-price">{{ formatCurrency(item.valorUnitario) }}</span>
+                    <span class="it-col it-col-total">{{ formatCurrency(item.valorTotal) }}</span>
+                    <span class="it-col it-col-icms">{{ formatCurrency(item.valorIcms) }}</span>
+                    <span class="it-col it-col-ipi">{{ formatCurrency(item.valorIpi) }}</span>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- NFSe -->
+            <ng-container *ngIf="isNFSe(doc)">
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Prestador</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialPrestador }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Prestador</span>
+                  <span class="doc-field-value mono">{{ formatCnpj($any(doc).cnpjPrestador) }}</span>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Tomador</span>
+                  <span class="doc-field-value">{{ $any(doc).razaoSocialTomador || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">CNPJ Tomador</span>
+                  <span class="doc-field-value mono">{{ $any(doc).cnpjTomador ? formatCnpj($any(doc).cnpjTomador) : '—' }}</span>
+                </div>
+              </div>
+              <div class="doc-grid doc-grid-3">
+                <div class="doc-field">
+                  <span class="doc-field-label">Valor Serviços</span>
+                  <span class="doc-field-value mono accent">{{ formatCurrency($any(doc).valorServicos) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">ISS</span>
+                  <span class="doc-field-value mono">{{ formatCurrency($any(doc).valorIss) }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Alíquota ISS</span>
+                  <span class="doc-field-value mono">{{ $any(doc).aliquotaIss }}%</span>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-field">
+                  <span class="doc-field-label">Serviço</span>
+                  <span class="doc-field-value">{{ $any(doc).descricaoServico || '—' }}</span>
+                </div>
+                <div class="doc-field">
+                  <span class="doc-field-label">Município</span>
+                  <span class="doc-field-value">{{ $any(doc).municipioPrestacao || '—' }} / {{ $any(doc).ufPrestacao || '—' }}</span>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Preview -->
     <div class="preview-block" *ngIf="previewLines.length > 0">
       <div class="preview-header">
@@ -500,6 +820,19 @@
           <path d="M3 14v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         Download .txt
+      </button>
+    </div>
+
+    <!-- New conversion button -->
+    <div class="new-conversion">
+      <button class="btn btn-ghost btn-new-conversion" (click)="resetForNewConversion()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2.5 8a5.5 5.5 0 019.3-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M13.5 8a5.5 5.5 0 01-9.3 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M11 2.5L12 4.5l2-.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 13.5L4 11.5l-2 .5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Nova conversão
       </button>
     </div>
   </main>

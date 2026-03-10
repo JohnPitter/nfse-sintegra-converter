@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { UnifiedParserService } from './services/unified-parser.service';
 import { SintegraGeneratorService } from './services/sintegra-generator.service';
 import { SintegraFormatterService } from './services/sintegra-formatter.service';
-import { SintegraConfig, SintegraGenerationResult, ParsedDocument, XmlDocumentType } from './models';
+import { SintegraConfig, SintegraGenerationResult, ParsedDocument, XmlDocumentType, isNFeDocument, isNFSeDocument } from './models';
 import { saveAs } from 'file-saver';
 
 interface FileInfo {
@@ -48,6 +48,9 @@ export class AppComponent {
 
   currentStep: 'upload' | 'config' | 'result' = 'upload';
   isDarkTheme = false;
+  showDocDetails = false;
+  expandedDocIndex: number | null = null;
+  expandedResultDocIndex: number | null = null;
   history: ConversionRecord[] = [];
   historyPage = 0;
   historyPageSize = 5;
@@ -278,6 +281,57 @@ export class AppComponent {
 
   historyNext(): void {
     if (this.historyPage < this.historyTotalPages - 1) this.historyPage++;
+  }
+
+  toggleDocDetails(): void {
+    this.showDocDetails = !this.showDocDetails;
+    if (!this.showDocDetails) {
+      this.expandedDocIndex = null;
+    }
+  }
+
+  toggleDocExpand(index: number): void {
+    this.expandedDocIndex = this.expandedDocIndex === index ? null : index;
+  }
+
+  isNFe(doc: ParsedDocument): boolean {
+    return isNFeDocument(doc);
+  }
+
+  isNFSe(doc: ParsedDocument): boolean {
+    return isNFSeDocument(doc);
+  }
+
+  formatCurrency(value: number): string {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  formatDateBr(dateStr: string): string {
+    if (!dateStr) return '—';
+    // Handle ISO format or YYYYMMDD
+    const clean = dateStr.replace(/[-T:Z]/g, '').substring(0, 8);
+    if (clean.length === 8) {
+      return `${clean.substring(6, 8)}/${clean.substring(4, 6)}/${clean.substring(0, 4)}`;
+    }
+    return dateStr;
+  }
+
+  resetForNewConversion(): void {
+    this.selectedFiles = [];
+    this.parsedDocuments = [];
+    this.documentType = '';
+    this.parseErrors = [];
+    this.isParsed = false;
+    this.generationResult = null;
+    this.previewLines = [];
+    this.showDocDetails = false;
+    this.expandedDocIndex = null;
+    this.expandedResultDocIndex = null;
+    this.currentStep = 'upload';
+  }
+
+  toggleResultDocExpand(index: number): void {
+    this.expandedResultDocIndex = this.expandedResultDocIndex === index ? null : index;
   }
 
   goToStep(step: 'upload' | 'config' | 'result'): void {
