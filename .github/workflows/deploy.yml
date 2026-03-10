@@ -1,0 +1,74 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build for Firebase
+        run: npx ng build --configuration production
+
+      - name: Upload Firebase artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-firebase
+          path: dist/nfse-sintegra-converter
+
+      - name: Build for GitHub Pages
+        run: npx ng build --configuration production --base-href /nfse-sintegra-converter/
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-ghpages
+          path: dist/nfse-sintegra-converter
+
+  deploy-firebase:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Firebase artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-firebase
+          path: dist/nfse-sintegra-converter
+
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: sintegra-converter
+
+  deploy-ghpages:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download GitHub Pages artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-ghpages
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
