@@ -111,11 +111,34 @@ export class NfeParserService {
     for (const type of icmsTypes) {
       if (icms[type]) {
         const orig = this.str(icms[type].orig);
-        const cst = this.str(icms[type].cst || icms[type].csosn);
+        const csosn = this.str(icms[type].csosn);
+        if (csosn) {
+          // CSOSN (Simples Nacional) -> CST mapping for SINTEGRA
+          const cstEquiv = this.mapCsosnToCst(csosn);
+          return orig + cstEquiv;
+        }
+        const cst = this.str(icms[type].cst);
         return orig + cst;
       }
     }
     return '000';
+  }
+
+  // Maps CSOSN (Simples Nacional) codes to equivalent CST codes (2 digits)
+  private mapCsosnToCst(csosn: string): string {
+    const map: Record<string, string> = {
+      '101': '00', // Tributada com permissão de crédito
+      '102': '41', // Tributada sem permissão de crédito -> não tributada
+      '103': '40', // Isenção do ICMS para faixa de receita bruta
+      '201': '10', // Tributada com permissão de crédito e com ST
+      '202': '30', // Tributada sem permissão de crédito e com ST
+      '203': '30', // Isenção do ICMS para faixa de receita bruta com ST
+      '300': '40', // Imune
+      '400': '41', // Não tributada pelo Simples Nacional
+      '500': '60', // ICMS cobrado anteriormente por ST
+      '900': '90', // Outros
+    };
+    return map[csosn] || '90';
   }
 
   private extractIcmsField(imposto: any, field: string): number {

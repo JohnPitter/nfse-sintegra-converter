@@ -35,15 +35,28 @@ export class SintegraGeneratorService {
     records.push(this.generateRegister11(config));
 
     const productCodes = new Set<string>();
+    const nfceDocs: NFeDocument[] = [];
 
     for (const doc of docs) {
       if (isNFeDocument(doc)) {
-        records.push(...this.generateRegister50FromNFe(doc, config));
-        records.push(...this.generateRegister54FromNFe(doc));
+        if (doc.modelo === '65') {
+          // NFCe (modelo 65) -> Registro 61/61R (NOT Registro 50/54)
+          nfceDocs.push(doc);
+        } else {
+          // NFe (modelo 55 etc) -> Registro 50/54
+          records.push(...this.generateRegister50FromNFe(doc, config));
+          records.push(...this.generateRegister54FromNFe(doc));
+        }
         doc.itens.forEach((item) => productCodes.add(item.codigoProduto));
       } else if (isNFSeDocument(doc)) {
         records.push(...this.generateRegister50FromNFSe(doc, config));
       }
+    }
+
+    // Generate Registro 61 (daily summary) and 61R (monthly item summary) for NFCe
+    if (nfceDocs.length > 0) {
+      records.push(...this.generateRegister61FromNFCe(nfceDocs));
+      records.push(...this.generateRegister61RFromNFCe(nfceDocs, config));
     }
 
     const nfeDocs = docs.filter(isNFeDocument);
@@ -106,6 +119,7 @@ export class SintegraGeneratorService {
   // ========== REGISTRO 11 - Dados Complementares ==========
   // tipo(2) + logradouro(34) + numero(5) + complemento(22) + bairro(15) + cep(8) + contato(28) + telefone(12) = 126
   private generateRegister11(config: SintegraConfig): string {
+    const contato = config.contato || config.razaoSocial || 'NAO INFORMADO';
     const record =
       '11' +
       this.fmt.formatAlpha(config.logradouro, 34) +
@@ -113,7 +127,7 @@ export class SintegraGeneratorService {
       this.fmt.formatAlpha(config.complemento, 22) +
       this.fmt.formatAlpha(config.bairro, 15) +
       this.fmt.formatNumeric(config.cep, 8) +
-      this.fmt.formatAlpha(config.contato, 28) +
+      this.fmt.formatAlpha(contato, 28) +
       this.fmt.formatNumeric(config.telefone, 12);
 
     return this.fmt.assertLength(record, '11');
@@ -226,15 +240,21 @@ export class SintegraGeneratorService {
   // ========== REGISTRO 54 - Itens de Nota Fiscal ==========
   // tipo(2) + cnpj(14) + modelo(2) + serie(3) + numero(6) + cfop(4) + cst(3) + num_item(3) + cod_produto(14) + quantidade(11,8v3) + vl_produto(12,10v2) + desconto(12,10v2) + bc_icms(12,10v2) + bc_icms_st(12,10v2) + vl_ipi(12,10v2) + aliquota(4,2v2) = 126
   private generateRegister54FromNFe(doc: NFeDocument): string[] {
+    // CNPJ must match the one used in Register 50 for the same document
+    const cfop = doc.itens.length > 0 ? doc.itens[0].cfop : '5102';
+    const cnpjReg54 = this.isSaida(cfop)
+      ? doc.cnpjDestinatario || doc.cnpjEmitente
+      : doc.cnpjEmitente;
+
     return doc.itens.map((item) => {
       const record =
         '54' +
-        this.fmt.formatCNPJ(doc.cnpjEmitente) +
+        this.fmt.formatCNPJ(cnpjReg54) +
         this.fmt.formatNumeric(doc.modelo, 2) +
         this.fmt.formatAlpha(doc.serie, 3) +
         this.fmt.formatNumeric(doc.numeroNota, 6) +
         this.fmt.formatNumeric(item.cfop, 4) +
-        this.fmt.formatAlpha(item.cst, 3) +
+        this.fmt.formatNumeric(item.cst, 3) +
         this.fmt.formatNumeric(item.numeroItem.toString(), 3) +
         this.fmt.formatAlpha(item.codigoProduto, 14) +
         this.fmt.formatQuantity(item.quantidade, 11, 3) +
@@ -247,6 +267,173 @@ export class SintegraGeneratorService {
 
       return this.fmt.assertLength(record, '54');
     });
+  }
+
+  // ========== REGISTRO 61 - Resumo Diario (ECF/NFCe modelo 65) ==========
+  // tipo(2) + brancos(14) + brancos(14) + data(8) + modelo(2) + serie(3) + subserie(2) + numInicial(6) + numFinal(6) + vlTotal(13) + bcIcms(13) + vlIcms(12) + isenta(13) + outras(13) + aliquota(4) + branco(1) = 126
+  private generateRegister61FromNFCe(nfceDocs: NFeDocument[]): string[] {
+    // Group by date + serie + aliquota
+    const groups = new Map<string, {
+      data: string;
+      serie: string;
+      aliquota: number;
+      numeros: number[];
+      vlTotal: number;
+      bcIcms: number;
+      vlIcms: number;
+      isenta: number;
+      outras: number;
+    }>();
+
+    for (const doc of nfceDocs) {
+      const data = this.fmt.formatDate(doc.dataEmissao);
+      // Derive dominant aliquota from items
+      const aliquotaGroups = this.groupItemsByAliquota(doc);
+
+      for (const ag of aliquotaGroups) {
+        const key = `${data}-${doc.serie}-${ag.aliquota}`;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            data,
+            serie: doc.serie,
+            aliquota: ag.aliquota,
+            numeros: [],
+            vlTotal: 0,
+            bcIcms: 0,
+            vlIcms: 0,
+            isenta: 0,
+            outras: 0,
+          });
+        }
+        const g = groups.get(key)!;
+        g.numeros.push(parseInt(doc.numeroNota) || 0);
+        g.vlTotal += ag.vlTotal;
+        g.bcIcms += ag.bcIcms;
+        g.vlIcms += ag.vlIcms;
+        g.isenta += ag.isenta;
+        g.outras += ag.outras;
+      }
+    }
+
+    const records: string[] = [];
+    for (const g of groups.values()) {
+      const numInicial = Math.min(...g.numeros);
+      const numFinal = Math.max(...g.numeros);
+
+      const record =
+        '61' +
+        ''.padEnd(14, ' ') + // CNPJ blank for modelo 65
+        ''.padEnd(14, ' ') + // IE blank for modelo 65
+        this.fmt.formatNumeric(g.data, 8) +
+        '65' + // modelo
+        this.fmt.formatAlpha(g.serie, 3) +
+        ''.padEnd(2, ' ') + // subserie blank
+        this.fmt.formatNumeric(numInicial.toString(), 6) +
+        this.fmt.formatNumeric(numFinal.toString(), 6) +
+        this.fmt.formatMoney(g.vlTotal, 13) +
+        this.fmt.formatMoney(g.bcIcms, 13) +
+        this.fmt.formatMoney(g.vlIcms, 12) +
+        this.fmt.formatMoney(g.isenta, 13) +
+        this.fmt.formatMoney(g.outras, 13) +
+        this.fmt.formatNumeric(Math.round(g.aliquota * 100).toString(), 4) +
+        ' '; // branco final
+
+      records.push(this.fmt.assertLength(record, '61'));
+    }
+
+    return records;
+  }
+
+  private groupItemsByAliquota(doc: NFeDocument): {
+    aliquota: number;
+    vlTotal: number;
+    bcIcms: number;
+    vlIcms: number;
+    isenta: number;
+    outras: number;
+  }[] {
+    const map = new Map<number, {
+      aliquota: number;
+      vlTotal: number;
+      bcIcms: number;
+      vlIcms: number;
+      isenta: number;
+      outras: number;
+    }>();
+
+    for (const item of doc.itens) {
+      const aliq = item.aliquotaIcms;
+      if (!map.has(aliq)) {
+        map.set(aliq, { aliquota: aliq, vlTotal: 0, bcIcms: 0, vlIcms: 0, isenta: 0, outras: 0 });
+      }
+      const g = map.get(aliq)!;
+      g.vlTotal += item.valorTotal;
+      g.bcIcms += item.baseCalculoIcms;
+      g.vlIcms += item.valorIcms;
+      if (this.isIsentoOuNaoTributado(item.cst)) {
+        g.isenta += item.valorTotal;
+      } else if (this.isOutras(item.cst)) {
+        g.outras += item.valorTotal;
+      }
+    }
+
+    return Array.from(map.values());
+  }
+
+  // ========== REGISTRO 61R - Resumo Mensal por Item (NFCe modelo 65) ==========
+  // tipo(2) + subtipo(1,"R") + mesAno(6,MMAAAA) + codProduto(14) + quantidade(13,10v3) + vlBruto(16,14v2) + bcIcms(16,14v2) + aliquota(4,2v2) + brancos(54) = 126
+  private generateRegister61RFromNFCe(nfceDocs: NFeDocument[], _config: SintegraConfig): string[] {
+    // Group items by month + product + aliquota
+    const groups = new Map<string, {
+      mesAno: string; // MMAAAA
+      codProduto: string;
+      aliquota: number;
+      quantidade: number;
+      vlBruto: number;
+      bcIcms: number;
+    }>();
+
+    for (const doc of nfceDocs) {
+      const dateStr = this.fmt.formatDate(doc.dataEmissao); // YYYYMMDD
+      if (dateStr === '00000000') continue;
+      const mesAno = dateStr.substring(4, 6) + dateStr.substring(0, 4); // MMAAAA
+
+      for (const item of doc.itens) {
+        const key = `${mesAno}-${item.codigoProduto}-${item.aliquotaIcms}`;
+        if (!groups.has(key)) {
+          groups.set(key, {
+            mesAno,
+            codProduto: item.codigoProduto,
+            aliquota: item.aliquotaIcms,
+            quantidade: 0,
+            vlBruto: 0,
+            bcIcms: 0,
+          });
+        }
+        const g = groups.get(key)!;
+        g.quantidade += item.quantidade;
+        g.vlBruto += item.valorTotal;
+        g.bcIcms += item.baseCalculoIcms;
+      }
+    }
+
+    const records: string[] = [];
+    for (const g of groups.values()) {
+      const record =
+        '61' +
+        'R' +
+        this.fmt.formatNumeric(g.mesAno, 6) +
+        this.fmt.formatAlpha(g.codProduto, 14) +
+        this.fmt.formatQuantity(g.quantidade, 13, 3) +
+        this.fmt.formatMoney(g.vlBruto, 16) +
+        this.fmt.formatMoney(g.bcIcms, 16) +
+        this.fmt.formatNumeric(Math.round(g.aliquota * 100).toString(), 4) +
+        ''.padEnd(54, ' ');
+
+      records.push(this.fmt.assertLength(record, '61'));
+    }
+
+    return records;
   }
 
   // ========== REGISTRO 75 - Tabela de Codigo de Produto/Servico ==========
@@ -292,7 +479,7 @@ export class SintegraGeneratorService {
   // ========== REGISTRO 90 - Totalizacao ==========
   // tipo(2) + cnpj(14) + ie(14) + [tipo_reg(2) + qtd(8)]* + brancos + num_reg90(1) at pos 126
   private generateRegister90(existingRecords: string[], config: SintegraConfig): string[] {
-    // Count records by type (exclude 10, 11, and 90)
+    // Count records by type, EXCLUDING types 10 and 11 from individual counts
     const counts = new Map<string, number>();
     for (const record of existingRecords) {
       const tipo = record.substring(0, 2);
@@ -387,6 +574,9 @@ export class SintegraGeneratorService {
   }
 
   generateDefaultConfig(docs: ParsedDocument[]): SintegraConfig {
+    // Derive period dates from document dates
+    const { dtInicial, dtFinal } = this.derivePeriodFromDocs(docs);
+
     const config: SintegraConfig = {
       cnpj: '',
       inscricaoEstadual: '',
@@ -401,8 +591,8 @@ export class SintegraGeneratorService {
       fax: '',
       contato: '',
       telefone: '',
-      dtInicial: this.fmt.formatDate(this.fmt.getFirstDayOfMonth()),
-      dtFinal: this.fmt.formatDate(this.fmt.getLastDayOfMonth()),
+      dtInicial,
+      dtFinal,
       codEstrutura: '3',
       codNatureza: '3',
       codFinalidade: '1',
@@ -430,5 +620,38 @@ export class SintegraGeneratorService {
     }
 
     return config;
+  }
+
+  private derivePeriodFromDocs(docs: ParsedDocument[]): { dtInicial: string; dtFinal: string } {
+    const dates: Date[] = [];
+
+    for (const doc of docs) {
+      if (!doc.dataEmissao) continue;
+      const dateStr = this.fmt.formatDate(doc.dataEmissao);
+      if (dateStr === '00000000') continue;
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6)) - 1;
+      const day = parseInt(dateStr.substring(6, 8));
+      dates.push(new Date(year, month, day));
+    }
+
+    if (dates.length === 0) {
+      return {
+        dtInicial: this.fmt.formatDate(this.fmt.getFirstDayOfMonth()),
+        dtFinal: this.fmt.formatDate(this.fmt.getLastDayOfMonth()),
+      };
+    }
+
+    const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
+    const latest = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    // Period must be first day to last day of the month range
+    const firstDay = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+    const lastDay = new Date(latest.getFullYear(), latest.getMonth() + 1, 0);
+
+    return {
+      dtInicial: this.fmt.formatDate(firstDay),
+      dtFinal: this.fmt.formatDate(lastDay),
+    };
   }
 }
