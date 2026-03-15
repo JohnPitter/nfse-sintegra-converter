@@ -158,9 +158,11 @@
 
     <div
       class="dropzone"
+      [class.drag-over]="isDragging"
       (click)="fileInput.click()"
-      (dragover)="$event.preventDefault()"
-      (drop)="$event.preventDefault()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
     >
       <div class="dropzone-inner">
         <div class="dropzone-icon">
