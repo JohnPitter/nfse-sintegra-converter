@@ -324,10 +324,12 @@
     border-style: solid;
     background: var(--accent-dim);
     box-shadow: 0 0 0 4px var(--accent-dim), inset 0 0 32px var(--accent-dim);
-    pointer-events: none;
 
+    // Prevent child elements from stealing dragleave events,
+    // but keep the dropzone itself interactive so drop can fire.
     .dropzone-inner {
       background: transparent;
+      pointer-events: none;
     }
 
     .dropzone-icon {

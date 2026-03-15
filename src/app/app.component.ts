@@ -139,11 +139,12 @@ export class AppComponent {
     this.isDragging = false;
     const transferred = event.dataTransfer?.files;
     if (!transferred || transferred.length === 0) return;
-    const xmlFiles = Array.from(transferred).filter((f) =>
-      f.name.toLowerCase().endsWith('.xml')
-    );
+    const allFiles = Array.from(transferred);
+    const xmlFiles = allFiles.filter((f) => f.name.toLowerCase().endsWith('.xml'));
     if (xmlFiles.length > 0) {
       this.addFiles(xmlFiles);
+    } else {
+      this.parseErrors = ['Apenas arquivos .xml são suportados. Verifique os arquivos arrastados.'];
     }
   }
 
