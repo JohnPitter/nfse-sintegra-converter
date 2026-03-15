@@ -43,6 +43,7 @@ export class AppComponent {
 
   isProcessing = false;
   isParsed = false;
+  isDragging = false;
   generationResult: SintegraGenerationResult | null = null;
   previewLines: string[] = [];
 
@@ -112,13 +113,47 @@ export class AppComponent {
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
+    this.addFiles(Array.from(input.files));
+  }
 
-    this.selectedFiles = Array.from(input.files).map((f) => ({
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    // Only clear the state when the pointer truly leaves the dropzone boundary
+    const target = event.currentTarget as HTMLElement;
+    const related = event.relatedTarget as Node | null;
+    if (!related || !target.contains(related)) {
+      this.isDragging = false;
+    }
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging = false;
+    const transferred = event.dataTransfer?.files;
+    if (!transferred || transferred.length === 0) return;
+    const allFiles = Array.from(transferred);
+    const xmlFiles = allFiles.filter((f) => f.name.toLowerCase().endsWith('.xml'));
+    if (xmlFiles.length > 0) {
+      this.addFiles(xmlFiles);
+    } else {
+      this.parseErrors = ['Apenas arquivos .xml são suportados. Verifique os arquivos arrastados.'];
+    }
+  }
+
+  private addFiles(files: File[]): void {
+    this.selectedFiles = files.map((f) => ({
       file: f,
       name: f.name,
       size: this.formatFileSize(f.size),
     }));
-
     this.generationResult = null;
     this.parseErrors = [];
     this.isParsed = false;

@@ -158,9 +158,16 @@
 
     <div
       class="dropzone"
+      role="button"
+      tabindex="0"
+      [attr.aria-label]="isDragging ? 'Solte os arquivos XML para adicionar' : 'Clique ou arraste arquivos XML para importar'"
+      [class.drag-over]="isDragging"
       (click)="fileInput.click()"
-      (dragover)="$event.preventDefault()"
-      (drop)="$event.preventDefault()"
+      (keydown.enter)="fileInput.click()"
+      (keydown.space)="fileInput.click()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
     >
       <div class="dropzone-inner">
         <div class="dropzone-icon">
@@ -169,8 +176,11 @@
             <path d="M6 28v4a2 2 0 002 2h24a2 2 0 002-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
-        <p class="dropzone-text">Selecionar arquivos <span class="dropzone-ext">.xml</span></p>
-        <p class="dropzone-hint">ou arraste aqui</p>
+        <p class="dropzone-text">
+          <ng-container *ngIf="!isDragging">Selecionar arquivos <span class="dropzone-ext">.xml</span></ng-container>
+          <ng-container *ngIf="isDragging">Solte para adicionar!</ng-container>
+        </p>
+        <p class="dropzone-hint">{{ isDragging ? 'Apenas arquivos .xml serão aceitos' : 'ou arraste aqui' }}</p>
       </div>
       <input
         type="file"
@@ -179,6 +189,8 @@
         accept=".xml"
         multiple
         class="sr-only"
+        aria-hidden="true"
+        tabindex="-1"
       />
     </div>
 
